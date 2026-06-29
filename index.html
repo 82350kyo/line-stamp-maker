@@ -237,6 +237,21 @@
           </button>
         </div>
 
+        <!-- (A2) シートプロンプト（49枚を1枚の画像にまとめる方式） -->
+        <div class="master-prompt-block sheet-prompt-block">
+          <h3>STEP A2｜シートプロンプト（49枚を1枚の画像にまとめる）</h3>
+          <p style="font-size:0.85rem; color:#5C6370; margin-bottom:12px;">
+            1回の送信で7×7グリッド（49マス）をまとめて生成する方式です。<br>
+            マスタープロンプトの<strong>代わりに</strong>このプロンプトをChatGPTに送ってください。<br>
+            生成された1枚の画像を後で49枚に切り分けてLINEに申請します。
+          </p>
+          <!-- シートプロンプトのテキスト（app.js が挿入） -->
+          <pre class="prompt-box" id="sheetPromptText"></pre>
+          <button class="btn-copy" id="sheetCopyBtn">
+            シートプロンプトをコピー
+          </button>
+        </div>
+
         <!-- (C) 一括コピーボタン -->
         <div class="bulk-copy-block">
           <div>

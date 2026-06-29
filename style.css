@@ -664,6 +664,21 @@ button {
   background: #16A34A;
 }
 
+/* シートプロンプトブロック（マスタープロンプトブロックの青系バリエーション）
+ * マスタープロンプトと視覚的に区別するためアクセントカラーを青系に変える */
+.sheet-prompt-block h3 {
+  color: var(--color-info);
+}
+
+.sheet-prompt-block h3::before {
+  background: var(--color-info);
+}
+
+.sheet-prompt-block .prompt-box {
+  background: #F0F4FF;
+  border-color: #BFCFFF;
+}
+
 /* 一括コピーブロック */
 .bulk-copy-block {
   background: var(--color-primary-pale);
