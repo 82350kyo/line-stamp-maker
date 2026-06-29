@@ -12,6 +12,8 @@
 const appState = {
   images: [],           // アップロードされた画像（File オブジェクト）
   consent: false,       // 権利同意チェックボックスの状態
+  personCount: null,    // 登場人数（"1" / "2" / "3"）
+  relationship: null,   // 関係性（"parent_child" など。2名以上のときのみ必須）
   conversionType: null, // 変換タイプ（"character" など）
   usage: null,          // 用途カテゴリ（"greeting" など）
   designStyle: null,    // デザイン系統（"illustration" など）
@@ -23,10 +25,16 @@ const appState = {
  * ===================================================== */
 document.addEventListener("DOMContentLoaded", () => {
   // 各セクションのUI部品を生成・配置する
+  buildPersonCountSection();     // 登場人数（新規）
+  buildRelationshipSection();    // 関係性（新規・初期は非表示）
   buildConversionTypeSection();
   buildUsageSection();
   buildDesignStyleSection();
   buildFontStyleSection();
+
+  // 関係性セクションは初期状態で非表示にする
+  const relSection = document.getElementById("stepRelationship");
+  if (relSection) relSection.style.display = "none";
 
   // 画像アップロードの設定
   setupImageUpload();
@@ -40,8 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // 初期状態でボタンの有効/無効を確認
   updateGenerateButtonState();
 
-  // m-4修正: マスタープロンプト・一括コピーボタンのイベントを DOMContentLoaded 内で登録
-  // （HTML の onclick 属性ではなく、他のボタンと統一した書き方にする）
+  // マスタープロンプト・一括コピーボタンのイベントを DOMContentLoaded 内で登録
   document.getElementById("masterCopyBtn").addEventListener("click", copyMasterPrompt);
   document.getElementById("bulkCopyBtn").addEventListener("click", copyAllPrompts);
 });
@@ -57,7 +64,7 @@ function setupImageUpload() {
   // ドロップゾーンクリックでファイル選択ダイアログを開く
   dropZone.addEventListener("click", () => fileInput.click());
 
-  // M-2修正: Enter / Space キーでもファイル選択ダイアログを開けるようにする
+  // Enter / Space キーでもファイル選択ダイアログを開けるようにする
   dropZone.addEventListener("keydown", (e) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault(); // スペースのページスクロールを防ぐ
@@ -65,8 +72,7 @@ function setupImageUpload() {
     }
   });
 
-  // m-2対応: 入室カウンタ方式で dragleave のちらつきを防ぐ
-  // 子要素へのホバー移動でも drag-over が外れないようにする
+  // 入室カウンタ方式で dragleave のちらつきを防ぐ
   let dragEnterCounter = 0;
 
   dropZone.addEventListener("dragenter", (e) => {
@@ -89,7 +95,7 @@ function setupImageUpload() {
   // ファイルをドロップしたとき
   dropZone.addEventListener("drop", (e) => {
     e.preventDefault();
-    dragEnterCounter = 0; // カウンタをリセットしてフラッシュを防ぐ
+    dragEnterCounter = 0;
     dropZone.classList.remove("drag-over");
     handleFiles(e.dataTransfer.files);
   });
@@ -107,10 +113,6 @@ function setupImageUpload() {
  * @param {FileList} files - 選択されたファイルのリスト
  */
 function handleFiles(files) {
-  const previewArea = document.getElementById("imagePreview");
-  const imageCountMsg = document.getElementById("imageCountMsg");
-
-  // 画像ファイルのみを対象にする
   const imageFiles = Array.from(files).filter((f) => f.type.startsWith("image/"));
 
   // 合計3枚を超えた場合は警告
@@ -128,11 +130,8 @@ function handleFiles(files) {
   toAdd.forEach((file) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      // 状態に追加
       const imgData = { file, dataUrl: e.target.result };
       appState.images.push(imgData);
-
-      // サムネイルを表示
       renderImagePreview();
       updateGenerateButtonState();
     };
@@ -200,12 +199,13 @@ function setupConsentCheckbox() {
 
 /**
  * カード選択UIを生成してコンテナに追加する
- * @param {string} containerId - 挿入先のコンテナ要素のID
- * @param {string} groupName   - ラジオボタンのname属性
- * @param {Array}  options     - 選択肢の配列
- * @param {string} stateKey    - appState に保存するキー名
+ * @param {string}   containerId - 挿入先のコンテナ要素のID
+ * @param {string}   groupName   - ラジオボタンのname属性
+ * @param {Array}    options     - 選択肢の配列
+ * @param {string}   stateKey    - appState に保存するキー名
+ * @param {Function} [onChange]  - 選択変更時に追加で呼ぶコールバック（省略可）
  */
-function buildCardGroup(containerId, groupName, options, stateKey) {
+function buildCardGroup(containerId, groupName, options, stateKey, onChange) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
@@ -263,11 +263,69 @@ function buildCardGroup(containerId, groupName, options, stateKey) {
       container.querySelectorAll(".option-card").forEach((c) => c.classList.remove("selected"));
       label.classList.add("selected");
       updateGenerateButtonState();
+      // 追加コールバックがあれば呼ぶ
+      if (onChange) onChange(opt.value);
     });
 
     container.appendChild(label);
   });
 }
+
+/* =====================================================
+ * 登場人数セクション（新規追加）
+ * ===================================================== */
+
+// 登場人数の選択肢を生成する
+function buildPersonCountSection() {
+  buildCardGroup(
+    "personCountCards",
+    "personCount",
+    PERSON_COUNTS,
+    "personCount",
+    handlePersonCountChange  // 選択変更時に関係性セクションの表示/非表示を切り替える
+  );
+}
+
+/**
+ * 登場人数が変更されたときに呼ばれる
+ * 2名以上のときは関係性セクションを表示する
+ * @param {string} value - 選択された人数（"1"/"2"/"3"）
+ */
+function handlePersonCountChange(value) {
+  const relSection = document.getElementById("stepRelationship");
+  if (!relSection) return;
+
+  const isMultiple = parseInt(value, 10) >= 2;
+
+  if (isMultiple) {
+    // 2名以上 → 関係性セクションを表示する
+    relSection.style.display = "block";
+  } else {
+    // 1名 → 関係性セクションを非表示にしてリセットする
+    relSection.style.display = "none";
+    appState.relationship = null;
+    document.querySelectorAll('[name="relationship"]').forEach((r) => {
+      r.checked = false;
+    });
+    document.querySelectorAll("#relationshipCards .option-card").forEach((c) => {
+      c.classList.remove("selected");
+    });
+    updateGenerateButtonState();
+  }
+}
+
+/* =====================================================
+ * 関係性セクション（新規追加）
+ * ===================================================== */
+
+// 関係性の選択肢を生成する（初期は非表示、CSS または JS で制御）
+function buildRelationshipSection() {
+  buildCardGroup("relationshipCards", "relationship", RELATIONSHIPS, "relationship");
+}
+
+/* =====================================================
+ * その他の選択肢セクション
+ * ===================================================== */
 
 // 変換タイプの選択肢を生成
 function buildConversionTypeSection() {
@@ -300,22 +358,29 @@ function setupGenerateButton() {
 
 /**
  * 全条件が揃っているかチェックして生成ボタンの状態を更新する
+ * 条件：画像≥1 / 同意 / 人数 / （2名以上なら関係） / 変換タイプ / 用途 / デザイン / フォント
  */
 function updateGenerateButtonState() {
   const btn = document.getElementById("generateBtn");
   if (!btn) return;
 
+  // 2名以上のときは関係性の選択も必須とする
+  const personCountNum = parseInt(appState.personCount, 10) || 0;
+  const relationshipRequired = personCountNum >= 2;
+
   const isReady =
     appState.images.length >= 1 &&
     appState.consent &&
-    appState.conversionType &&
-    appState.usage &&
-    appState.designStyle &&
-    appState.fontStyle;
+    appState.personCount !== null &&
+    (!relationshipRequired || appState.relationship !== null) &&
+    appState.conversionType !== null &&
+    appState.usage !== null &&
+    appState.designStyle !== null &&
+    appState.fontStyle !== null;
 
   btn.disabled = !isReady;
 
-  // 未完了の項目をヒント表示
+  // 未完了の項目をヒント表示する
   const hintEl = document.getElementById("generateHint");
   if (hintEl) {
     if (isReady) {
@@ -324,11 +389,13 @@ function updateGenerateButtonState() {
     } else {
       const missing = [];
       if (appState.images.length === 0) missing.push("参照画像のアップロード");
-      if (!appState.consent) missing.push("権利確認チェックボックス");
-      if (!appState.conversionType) missing.push("変換タイプ");
-      if (!appState.usage) missing.push("用途");
-      if (!appState.designStyle) missing.push("デザイン系統");
-      if (!appState.fontStyle) missing.push("フォント感");
+      if (!appState.consent)          missing.push("権利確認チェックボックス");
+      if (!appState.personCount)      missing.push("登場人数");
+      if (relationshipRequired && !appState.relationship) missing.push("関係");
+      if (!appState.conversionType)   missing.push("変換タイプ");
+      if (!appState.usage)            missing.push("用途");
+      if (!appState.designStyle)      missing.push("デザイン系統");
+      if (!appState.fontStyle)        missing.push("フォント感");
       hintEl.textContent = "未完了：" + missing.join("、");
       hintEl.className = "generate-hint pending";
     }
@@ -339,16 +406,17 @@ function updateGenerateButtonState() {
  * プロンプト生成処理（アプリの核心機能）
  * ===================================================== */
 function handleGenerate() {
-  // 選んだ設定のオブジェクトを取得
-  const convType = CONVERSION_TYPES.find((c) => c.value === appState.conversionType);
-  const usageCat = USAGE_CATEGORIES.find((u) => u.value === appState.usage);
-  const design   = DESIGN_STYLES.find((d) => d.value === appState.designStyle);
-  const font     = FONT_STYLES.find((f) => f.value === appState.fontStyle);
+  // 選んだ設定のオブジェクトを取得する
+  const convType   = CONVERSION_TYPES.find((c) => c.value === appState.conversionType);
+  const usageCat   = USAGE_CATEGORIES.find((u) => u.value === appState.usage);
+  const design     = DESIGN_STYLES.find((d) => d.value === appState.designStyle);
+  const font       = FONT_STYLES.find((f) => f.value === appState.fontStyle);
+  const relObj     = RELATIONSHIPS.find((r) => r.value === appState.relationship) || null;
 
-  // 用途に対応するスタンプ文言リストを取得
+  // 用途に対応するスタンプ文言リストを取得する
   const wordList = STAMP_DATA[usageCat.dataKey];
 
-  // m-5修正: wordList が取得できない場合はエラーを表示して処理を中断する
+  // wordList が取得できない場合はエラーを表示して処理を中断する
   if (!wordList) {
     showAlert(
       `データの取得に失敗しました（キー: ${usageCat.dataKey}）。` +
@@ -357,36 +425,89 @@ function handleGenerate() {
     return;
   }
 
-  // --- (A) マスタープロンプトを生成 ---
-  const masterPrompt = buildMasterPrompt(convType, design, font, appState.images.length);
+  // --- (A) マスタープロンプトを生成する ---
+  const masterPrompt = buildMasterPrompt(
+    convType, design, font,
+    appState.images.length, appState.personCount, relObj
+  );
 
-  // --- (B) 49個の個別プロンプトを生成 ---
-  const individualPrompts = buildIndividualPrompts(wordList, convType, design, font);
+  // --- (B) 49個の個別プロンプトを生成する ---
+  const individualPrompts = buildIndividualPrompts(
+    wordList, convType, design, font,
+    appState.personCount, relObj
+  );
 
-  // 結果を画面に表示
+  // 結果を画面に表示する
   renderResults(masterPrompt, individualPrompts);
 
-  // 結果エリアまでスムーズスクロール
+  // 結果エリアまでスムーズスクロールする
   document.getElementById("resultsSection").scrollIntoView({ behavior: "smooth" });
 }
 
 /**
  * マスタープロンプト（キャラ固定用の最初の1個）を生成する
+ * @param {Object}      convType    - 変換タイプオブジェクト
+ * @param {Object}      design      - デザイン系統オブジェクト
+ * @param {Object}      font        - フォント感オブジェクト
+ * @param {number}      imageCount  - アップロード画像枚数
+ * @param {string}      personCount - 登場人数（"1"/"2"/"3"）
+ * @param {Object|null} relObj      - 関係性オブジェクト（1名のときは null）
  */
-function buildMasterPrompt(convType, design, font, imageCount) {
-  const imageText =
-    imageCount === 1
-      ? "添付した参照画像（1枚）"
-      : `添付した参照画像（${imageCount}枚、同一人物の異なるアングル）`;
+function buildMasterPrompt(convType, design, font, imageCount, personCount, relObj) {
+  const personCountNum = parseInt(personCount, 10) || 1;
+
+  // 参照画像の説明文を人数に合わせて変える
+  let imageText;
+  if (imageCount === 1) {
+    imageText = "添付した参照画像（1枚）";
+  } else if (personCountNum === 1) {
+    imageText = `添付した参照画像（${imageCount}枚、同一人物の異なるアングル）`;
+  } else {
+    imageText = `添付した参照画像（${imageCount}枚）`;
+  }
+
+  // 登場人数のセクション文言を組み立てる
+  let personSection = "";
+  if (personCountNum === 1) {
+    personSection =
+      `登場人数：1名\n` +
+      `参照画像に映っている人物1名をキャラクター化する。\n` +
+      `全スタンプを通じてこの1名を一貫して描くこと。`;
+  } else {
+    // 2名/3名の場合
+    const relationLabel = relObj ? relObj.label : "不問";
+    const relationDesc  = relObj ? relObj.masterDesc : "自然な関係として描く。状況に合った自然な絡みややりとりを表現する";
+
+    personSection =
+      `登場人数：${personCountNum}名\n` +
+      `参照画像から人物${personCountNum}名分のキャラクターを作成する。\n` +
+      `参照画像の枚数がキャラクター数と一致しない場合でも、` +
+      `画像に映っている人物から${personCountNum}名分を読み取ってキャラクターを固定すること。\n\n` +
+      `関係性：${relationLabel}\n` +
+      `${relationDesc}\n\n` +
+      `全スタンプで${personCountNum}名全員を毎回登場させること。\n` +
+      `各スタンプのシーンに合わせて、全員が一緒に絡み・掛け合いをする構図で描くこと。`;
+  }
+
+  // LINEスタンプ規格の枠数の説明（人数に応じて変える）
+  const stampCountRule =
+    personCountNum === 1
+      ? "・1枚につき1キャラクターのみ描くこと"
+      : `・1枚につき${personCountNum}名全員を描くこと`;
 
   return `【マスタープロンプト：キャラクター設定の固定】
 
 ${imageText}を参照して、LINEスタンプ用のキャラクターを以下の指示に従って生成してください。
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■ 登場人数・関係性の設定
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${personSection}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ■ キャラクター固定ルール（最優先・絶対厳守）
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-参照画像に映っている人物の以下の要素を完全に固定し、
+参照画像に映っているすべての人物の以下の要素を完全に固定し、
 これから生成するすべての画像で一切変えないこと：
 
 ・顔立ち（目の形・大きさ、鼻・口・輪郭の形）
@@ -412,7 +533,7 @@ ${design.promptText}
 ・背景は完全透明（透過PNG）にすること
 ・キャラクターを画面中央に大きく配置し、
 　上下左右に約 10% の余白を設けること
-・1枚につき1キャラクターのみ描くこと
+${stampCountRule}
 ・文字はキャラクターの下部または周辺に
 　自然になじむように配置すること
 
@@ -439,14 +560,18 @@ ${design.promptText}
 
 /**
  * 49個の個別プロンプトを生成する
- * @param {Array} wordList - スタンプ文言と表情ヒントの配列
- * @param {Object} convType - 変換タイプオブジェクト
- * @param {Object} design   - デザイン系統オブジェクト
- * @param {Object} font     - フォント感オブジェクト
+ * @param {Array}       wordList    - スタンプ文言と表情ヒントの配列
+ * @param {Object}      convType    - 変換タイプオブジェクト
+ * @param {Object}      design      - デザイン系統オブジェクト
+ * @param {Object}      font        - フォント感オブジェクト
+ * @param {string}      personCount - 登場人数（"1"/"2"/"3"）
+ * @param {Object|null} relObj      - 関係性オブジェクト（1名のときは null）
  * @returns {string[]} 49個のプロンプト文字列の配列
  */
-function buildIndividualPrompts(wordList, convType, design, font) {
-  // m-1修正: wordList が49個未満の場合は開発者向け警告を出す（サイレント減数の防止）
+function buildIndividualPrompts(wordList, convType, design, font, personCount, relObj) {
+  const personCountNum = parseInt(personCount, 10) || 1;
+
+  // wordList が49個未満の場合は開発者向け警告を出す（サイレント減数の防止）
   if (wordList.length < 49) {
     console.warn(
       `[LINEスタンプメーカー] wordList が49個未満です（現在 ${wordList.length} 個）。` +
@@ -454,7 +579,6 @@ function buildIndividualPrompts(wordList, convType, design, font) {
     );
   }
 
-  // 49枚分のプロンプトを生成（文言リストが49個あるのでそのまま使う）
   const prompts = [];
   const total = Math.min(wordList.length, 49);
 
@@ -465,10 +589,18 @@ function buildIndividualPrompts(wordList, convType, design, font) {
     // 簡潔なスタイルタグ（毎回フルで書くと冗長なので語尾に短く付ける）
     const styleTag = `（${design.label}・${font.label}・透過背景・正方形）`;
 
+    // 2名以上のときは絡み方のヒントを追加する
+    let interactionLine = "";
+    if (personCountNum >= 2 && relObj) {
+      interactionLine =
+        `\n・絡み方：${personCountNum}名全員が一緒に登場し、` +
+        `「${item.text}」の文言に合った${relObj.interactionHint}`;
+    }
+
     const prompt =
       `【スタンプ${num}】\n` +
       `上のマスタープロンプトのキャラクター設定に従い、以下の1枚を生成してください。\n` +
-      `・表情とポーズ：${item.pose}\n` +
+      `・表情とポーズ：${item.pose}${interactionLine}\n` +
       `・セリフ：「${item.text}」を${font.label}で表示\n` +
       `・スタイル${styleTag}`;
 
@@ -485,10 +617,10 @@ function renderResults(masterPrompt, individualPrompts) {
   const section = document.getElementById("resultsSection");
   section.style.display = "block";
 
-  // マスタープロンプトを表示
+  // マスタープロンプトを表示する
   document.getElementById("masterPromptText").textContent = masterPrompt;
 
-  // 49枚一括コピー用のテキストを準備
+  // 49枚一括コピー用のテキストを準備する
   const allText =
     "【マスタープロンプト】\n" + masterPrompt + "\n\n" +
     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
@@ -496,13 +628,13 @@ function renderResults(masterPrompt, individualPrompts) {
     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" +
     individualPrompts.join("\n\n");
 
-  // 一括コピーボタンのデータ属性に格納
+  // 一括コピーボタンのデータ属性に格納する
   const bulkCopyBtn = document.getElementById("bulkCopyBtn");
   if (bulkCopyBtn) {
     bulkCopyBtn.dataset.copyText = allText;
   }
 
-  // 個別プロンプトリストを生成
+  // 個別プロンプトリストを生成する
   const listContainer = document.getElementById("individualPromptsList");
   listContainer.innerHTML = "";
 
@@ -534,7 +666,7 @@ function renderResults(masterPrompt, individualPrompts) {
     listContainer.appendChild(item);
   });
 
-  // カウント表示
+  // カウント表示を更新する
   const countEl = document.getElementById("promptCount");
   if (countEl) countEl.textContent = `${individualPrompts.length}個`;
 }
@@ -545,11 +677,10 @@ function renderResults(masterPrompt, individualPrompts) {
 
 /**
  * テキストをクリップボードにコピーし、ボタンにフィードバックを表示する
- * @param {string} text          - コピーするテキスト
- * @param {HTMLElement} btnEl    - フィードバックを表示するボタン要素
+ * @param {string}      text  - コピーするテキスト
+ * @param {HTMLElement} btnEl - フィードバックを表示するボタン要素
  */
 async function copyToClipboard(text, btnEl) {
-  // M-1修正: 成功フラグを導入し、実際にコピーできた場合のみフィードバックを表示する
   let success = false;
 
   try {
@@ -566,14 +697,14 @@ async function copyToClipboard(text, btnEl) {
     textarea.select();
     try {
       document.execCommand("copy");
-      success = true; // execCommand でのコピーも成功扱い
+      success = true;
     } catch (e) {
       showAlert("コピーに失敗しました。手動でテキストを選択してコピーしてください。");
     }
     document.body.removeChild(textarea);
   }
 
-  // 実際にコピーできた場合のみ成功フィードバックを表示（失敗時は showAlert のみ）
+  // 実際にコピーできた場合のみ成功フィードバックを表示する
   if (success) {
     const originalText = btnEl.textContent;
     btnEl.textContent = "コピーしました！";
@@ -585,14 +716,14 @@ async function copyToClipboard(text, btnEl) {
   }
 }
 
-// マスタープロンプトのコピーボタン（m-4修正後は DOMContentLoaded 内のリスナーから呼ばれる）
+// マスタープロンプトのコピーボタン
 function copyMasterPrompt() {
   const text = document.getElementById("masterPromptText").textContent;
   const btn  = document.getElementById("masterCopyBtn");
   copyToClipboard(text, btn);
 }
 
-// 全プロンプト一括コピーボタン（m-4修正後は DOMContentLoaded 内のリスナーから呼ばれる）
+// 全プロンプト一括コピーボタン
 function copyAllPrompts() {
   const btn  = document.getElementById("bulkCopyBtn");
   const text = btn.dataset.copyText;

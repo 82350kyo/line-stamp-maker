@@ -61,7 +61,7 @@
         <div class="step-badge">1</div>
         <div>
           <div class="section-title">参照画像のアップロード</div>
-          <div class="section-subtitle">キャラクターの元となる写真を1〜3枚選んでください</div>
+          <div class="section-subtitle">スタンプに登場させたいキャラクターの元となる写真を1〜3枚選んでください</div>
         </div>
       </div>
 
@@ -96,21 +96,51 @@
       <div class="consent-area">
         <label class="consent-label">
           <input type="checkbox" id="consentCheck" />
-          自分自身、または許諾を得た人物・権利者の画像のみを使用します
+          登場するすべての人物について、本人または権利者から許諾を得た画像のみを使用します
         </label>
         <div class="consent-note">
           LINE の審査では他人の顔写真を無断で使用したスタンプは却下されます。
-          必ず権利を持っている画像をご使用ください。
+          登場するすべての人物の許諾を得た画像のみご使用ください。
         </div>
       </div>
     </section>
 
     <!-- =================================================
-         STEP 2：変換タイプの選択
+         STEP 2：登場人数の選択（新規追加）
+         ================================================= -->
+    <section class="section" id="stepPersonCount">
+      <div class="section-header">
+        <div class="step-badge">2</div>
+        <div>
+          <div class="section-title">登場人数を選んでください</div>
+          <div class="section-subtitle">参照画像から作るキャラクターの人数を選びます（参照画像の枚数と一致しなくても大丈夫です）</div>
+        </div>
+      </div>
+
+      <div class="option-cards" id="personCountCards"></div>
+    </section>
+
+    <!-- =================================================
+         STEP 3：関係性の選択（2名以上のとき表示）
+         ================================================= -->
+    <section class="section" id="stepRelationship">
+      <div class="section-header">
+        <div class="step-badge">3</div>
+        <div>
+          <div class="section-title">関係を選んでください</div>
+          <div class="section-subtitle">登場するキャラクター同士の関係を選ぶと、絡み方の指示がプロンプトに反映されます</div>
+        </div>
+      </div>
+
+      <div class="option-cards" id="relationshipCards"></div>
+    </section>
+
+    <!-- =================================================
+         STEP 4：変換タイプの選択
          ================================================= -->
     <section class="section" id="step2">
       <div class="section-header">
-        <div class="step-badge">2</div>
+        <div class="step-badge">4</div>
         <div>
           <div class="section-title">変換タイプを選んでください</div>
           <div class="section-subtitle">参照画像をどんな絵柄に変換するかを選びます</div>
@@ -122,11 +152,11 @@
     </section>
 
     <!-- =================================================
-         STEP 3：用途の選択
+         STEP 5：用途の選択
          ================================================= -->
     <section class="section" id="step3">
       <div class="section-header">
-        <div class="step-badge">3</div>
+        <div class="step-badge">5</div>
         <div>
           <div class="section-title">スタンプの用途を選んでください</div>
           <div class="section-subtitle">選んだ用途に合わせて49個のセリフが決まります</div>
@@ -137,11 +167,11 @@
     </section>
 
     <!-- =================================================
-         STEP 4：デザイン系統の選択
+         STEP 6：デザイン系統の選択
          ================================================= -->
     <section class="section" id="step4">
       <div class="section-header">
-        <div class="step-badge">4</div>
+        <div class="step-badge">6</div>
         <div>
           <div class="section-title">デザイン系統を選んでください</div>
           <div class="section-subtitle">スタンプ全体のアートスタイルを決めます</div>
@@ -152,11 +182,11 @@
     </section>
 
     <!-- =================================================
-         STEP 5：フォント感の選択
+         STEP 7：フォント感の選択
          ================================================= -->
     <section class="section" id="step5">
       <div class="section-header">
-        <div class="step-badge">5</div>
+        <div class="step-badge">7</div>
         <div>
           <div class="section-title">フォント感を選んでください</div>
           <div class="section-subtitle">セリフ文字のフォントスタイルを決めます</div>
@@ -170,9 +200,9 @@
          生成ボタン
          ================================================= -->
     <div class="generate-area">
-      <!-- 未完了の項目ヒント -->
+      <!-- 未完了の項目ヒント（app.js が動的に更新） -->
       <div class="generate-hint pending" id="generateHint">
-        未完了：参照画像のアップロード、権利確認チェックボックス、変換タイプ、用途、デザイン系統、フォント感
+        未完了：参照画像のアップロード、権利確認チェックボックス、登場人数、変換タイプ、用途、デザイン系統、フォント感
       </div>
 
       <!-- メインの生成ボタン -->
@@ -202,7 +232,6 @@
           </p>
           <!-- マスタープロンプトのテキスト（app.js が挿入） -->
           <pre class="prompt-box" id="masterPromptText"></pre>
-          <!-- m-4修正: onclick をインラインから除去。イベントは app.js の DOMContentLoaded 内で登録 -->
           <button class="btn-copy" id="masterCopyBtn">
             マスタープロンプトをコピー
           </button>
@@ -214,7 +243,6 @@
             <p>49枚分をすべてまとめてコピー</p>
             <small>マスタープロンプト＋個別プロンプト49枚を番号付きで一括コピーします</small>
           </div>
-          <!-- m-4修正: onclick をインラインから除去。イベントは app.js の DOMContentLoaded 内で登録 -->
           <button class="btn-bulk-copy" id="bulkCopyBtn">
             まとめてコピー（全50件）
           </button>
@@ -353,7 +381,7 @@
           </li>
           <li>
             他人の顔写真を無断で使用したスタンプはLINEの審査規約に違反します。
-            自分自身または許諾を得た方の画像のみ使用してください。
+            登場するすべての人物について、本人または権利者の許諾を得た画像のみ使用してください。
           </li>
           <li>
             有名人・著名人・キャラクターの画像は著作権・肖像権の問題があり、
