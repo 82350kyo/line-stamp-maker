@@ -489,22 +489,25 @@ function buildMasterPrompt(convType, design, font, imageCount, personCount, relO
     const relationLabel = relObj ? relObj.label : "不問";
     const relationDesc  = relObj ? relObj.masterDesc : "自然な関係として描く。状況に合った自然な絡みややりとりを表現する";
 
+    // 全員強制ではなく「シーンに自然な人数」を登場させる方針に変更
     personSection =
       `登場人数：${personCountNum}名\n` +
       `参照画像から人物${personCountNum}名分のキャラクターを作成する。\n` +
       `参照画像の枚数がキャラクター数と一致しない場合でも、` +
       `画像に映っている人物から${personCountNum}名分を読み取ってキャラクターを固定すること。\n\n` +
-      `関係性：${relationLabel}\n` +
-      `${relationDesc}\n\n` +
-      `全スタンプで${personCountNum}名全員を毎回登場させること。\n` +
-      `各スタンプのシーンに合わせて、全員が一緒に絡み・掛け合いをする構図で描くこと。`;
+      `関係性：${relationLabel}\n\n` +
+      `登場しうるのは最大${personCountNum}名。各スタンプのセリフ・シーンに最も自然な人数だけを登場させること。\n` +
+      `1人が自然な場面は1人だけ、掛け合いが自然な場面は2名以上を登場させてよい。\n` +
+      `2名以上が登場するスタンプでは、${relationDesc}。\n` +
+      `どのキャラクターを描く場合も、外見（顔・髪・服・体型・配色）は固定したまま描くこと。`;
   }
 
   // LINEスタンプ規格の枠数の説明（人数に応じて変える）
+  // 2名以上はシーンに自然な人数（1〜最大人数）を指定する
   const stampCountRule =
     personCountNum === 1
       ? "・1枚につき1キャラクターのみ描くこと"
-      : `・1枚につき${personCountNum}名全員を描くこと`;
+      : `・1枚につきセリフ・シーンに最も自然な人数（1〜${personCountNum}名の範囲）で描くこと`;
 
   return `【マスタープロンプト：キャラクター設定の固定】
 
@@ -600,12 +603,12 @@ function buildIndividualPrompts(wordList, convType, design, font, personCount, r
     // 簡潔なスタイルタグ（毎回フルで書くと冗長なので語尾に短く付ける）
     const styleTag = `（${design.label}・${font.label}・透過背景・正方形）`;
 
-    // 2名以上のときは絡み方のヒントを追加する
+    // 2名以上のときは「シーンに自然な人数」と絡み方ヒントを条件付きで追加する
     let interactionLine = "";
     if (personCountNum >= 2 && relObj) {
       interactionLine =
-        `\n・絡み方：${personCountNum}名全員が一緒に登場し、` +
-        `「${item.text}」の文言に合った${relObj.interactionHint}`;
+        `\n・登場人数：このセリフ・シーンに最も自然な人数（1〜${personCountNum}名）で描くこと。` +
+        `2名以上が登場する場合は${relObj.interactionHint}`;
     }
 
     const prompt =
@@ -654,11 +657,15 @@ function buildSheetPrompt(wordList, convType, design, font, personCount, relObj)
   } else {
     const relationLabel = relObj ? relObj.label : "不問";
     const relationDesc  = relObj ? relObj.masterDesc : "自然な関係として描く。状況に合った自然な絡みややりとりを表現する";
+
+    // 全員強制ではなく「各マスのシーンに自然な人数」を登場させる方針に変更
     personSection =
-      `登場人数：${personCountNum}名（関係性：${relationLabel}）\n` +
+      `登場人数：最大${personCountNum}名（関係性：${relationLabel}）\n` +
       `参照画像から${personCountNum}名分のキャラクターを作成する。\n` +
-      `${relationDesc}\n` +
-      `全49マスに${personCountNum}名全員を毎回登場させること。`;
+      `各マスのセリフ・シーンに最も自然な人数だけを登場させること。\n` +
+      `1人が自然な場面は1人だけ、掛け合いが自然な場面は2名以上を登場させてよい。\n` +
+      `2名以上が登場するマスでは、${relationDesc}。\n` +
+      `どのキャラクターを描く場合も、外見（顔・髪・服・体型・配色）は固定したまま描くこと。`;
   }
 
   // 各マスの仕様を1行ずつ列挙する（buildIndividualPrompts と同じロジックで絡みヒントを反映）
@@ -667,10 +674,10 @@ function buildSheetPrompt(wordList, convType, design, font, personCount, relObj)
     const item = wordList[i];
     const num  = String(i + 1).padStart(2, "0");
 
-    // 2名以上のときは絡み方ヒントを付ける
+    // 2名以上のときは絡み方ヒントを条件付きで付ける（全員強制ではなく2名以上登場時の指示として記載）
     let interactionPart = "";
     if (personCountNum >= 2 && relObj) {
-      interactionPart = `（${personCountNum}名で${relObj.interactionHint}）`;
+      interactionPart = `（2名以上登場する場合は${relObj.interactionHint}）`;
     }
 
     cellLines.push(
@@ -730,8 +737,6 @@ ${design.promptText}
 ・マス間には均一な余白（ガター）を設け、境界が視認できるようにすること
 ・各マスの背景は白または透明で全マス統一すること
 ・グリッド全体は正方形に近い比率で生成すること
-・各マスの隅（右下または左下）に小さく通し番号（01〜49）を薄く表示すること
-　（切り分け後の識別用。スタンプデザインの邪魔にならない程度に控えめな表示で）
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ■ 各マスの仕様（49マス分）
