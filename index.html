@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="LINEスタンプ用のプロンプトを自動生成。ChatGPTに貼るだけでオリジナルキャラのスタンプ49枚分のプロンプトが完成。" />
+  <title>LINEスタンプ プロンプトメーカー</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- =====================================================
+       ヘッダー
+       ===================================================== -->
+  <header class="site-header">
+    <div class="header-badge">ChatGPT × LINEスタンプ</div>
+    <h1>LINEスタンプ<br>プロンプトメーカー</h1>
+    <p class="header-subtitle">
+      参照画像をアップして設定を選ぶだけで、<br>
+      ChatGPTに貼り付けるプロンプトが49枚分まとめて完成
+    </p>
+  </header>
+
+  <!-- =====================================================
+       メインコンテンツ
+       ===================================================== -->
+  <main class="main-container">
+
+    <!-- 利用の流れ説明バナー -->
+    <div class="flow-banner">
+      <h2>このアプリの使い方</h2>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-step-num">1</div>
+          <span>このアプリで設定を選んでプロンプトを生成</span>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">
+          <div class="flow-step-num">2</div>
+          <span>ChatGPTに参照画像を添付して<br>マスタープロンプトを貼る</span>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">
+          <div class="flow-step-num">3</div>
+          <span>個別プロンプトを1枚ずつ貼って<br>49枚を生成する</span>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">
+          <div class="flow-step-num">4</div>
+          <span>仕上げてLINEに申請</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- =================================================
+         STEP 1：参照画像のアップロード
+         ================================================= -->
+    <section class="section" id="step1">
+      <div class="section-header">
+        <div class="step-badge">1</div>
+        <div>
+          <div class="section-title">参照画像のアップロード</div>
+          <div class="section-subtitle">キャラクターの元となる写真を1〜3枚選んでください</div>
+        </div>
+      </div>
+
+      <!-- ドラッグ&ドロップ エリア -->
+      <div class="upload-area" id="dropZone" role="button" tabindex="0"
+           aria-label="画像をクリックまたはドラッグ&ドロップでアップロード">
+        <div class="upload-icon">+</div>
+        <div class="upload-title">クリック または ドラッグ&ドロップ</div>
+        <div class="upload-hint">
+          JPG・PNG・WebP に対応<br>
+          <strong>最大3枚まで</strong>選択できます
+        </div>
+        <!-- 隠しファイル入力 -->
+        <input type="file" id="fileInput" accept="image/*" multiple />
+      </div>
+
+      <!-- サムネイルプレビュー -->
+      <div class="image-preview" id="imagePreview"></div>
+      <div class="image-count-msg" id="imageCountMsg">画像が選択されていません</div>
+
+      <!-- ChatGPT添付の説明 -->
+      <div class="attach-note">
+        <strong>この画像はChatGPTに直接添付するものです。</strong><br>
+        このアプリは画像の分析を行いません。ここでアップした画像は
+        プレビュー表示のみに使用します。<br>
+        生成したプロンプトをChatGPTに貼り付けるとき、
+        <strong>この画像をChatGPTの画像添付機能で一緒に送信</strong>してください。
+        そうすることでChatGPTがキャラクターを認識して画像を生成できます。
+      </div>
+
+      <!-- 権利確認チェックボックス（必須） -->
+      <div class="consent-area">
+        <label class="consent-label">
+          <input type="checkbox" id="consentCheck" />
+          自分自身、または許諾を得た人物・権利者の画像のみを使用します
+        </label>
+        <div class="consent-note">
+          LINE の審査では他人の顔写真を無断で使用したスタンプは却下されます。
+          必ず権利を持っている画像をご使用ください。
+        </div>
+      </div>
+    </section>
+
+    <!-- =================================================
+         STEP 2：変換タイプの選択
+         ================================================= -->
+    <section class="section" id="step2">
+      <div class="section-header">
+        <div class="step-badge">2</div>
+        <div>
+          <div class="section-title">変換タイプを選んでください</div>
+          <div class="section-subtitle">参照画像をどんな絵柄に変換するかを選びます</div>
+        </div>
+      </div>
+
+      <!-- カード選択グループ（app.js が自動生成） -->
+      <div class="option-cards" id="conversionTypeCards"></div>
+    </section>
+
+    <!-- =================================================
+         STEP 3：用途の選択
+         ================================================= -->
+    <section class="section" id="step3">
+      <div class="section-header">
+        <div class="step-badge">3</div>
+        <div>
+          <div class="section-title">スタンプの用途を選んでください</div>
+          <div class="section-subtitle">選んだ用途に合わせて49個のセリフが決まります</div>
+        </div>
+      </div>
+
+      <div class="option-cards" id="usageCards"></div>
+    </section>
+
+    <!-- =================================================
+         STEP 4：デザイン系統の選択
+         ================================================= -->
+    <section class="section" id="step4">
+      <div class="section-header">
+        <div class="step-badge">4</div>
+        <div>
+          <div class="section-title">デザイン系統を選んでください</div>
+          <div class="section-subtitle">スタンプ全体のアートスタイルを決めます</div>
+        </div>
+      </div>
+
+      <div class="option-cards" id="designStyleCards"></div>
+    </section>
+
+    <!-- =================================================
+         STEP 5：フォント感の選択
+         ================================================= -->
+    <section class="section" id="step5">
+      <div class="section-header">
+        <div class="step-badge">5</div>
+        <div>
+          <div class="section-title">フォント感を選んでください</div>
+          <div class="section-subtitle">セリフ文字のフォントスタイルを決めます</div>
+        </div>
+      </div>
+
+      <div class="option-cards" id="fontStyleCards"></div>
+    </section>
+
+    <!-- =================================================
+         生成ボタン
+         ================================================= -->
+    <div class="generate-area">
+      <!-- 未完了の項目ヒント -->
+      <div class="generate-hint pending" id="generateHint">
+        未完了：参照画像のアップロード、権利確認チェックボックス、変換タイプ、用途、デザイン系統、フォント感
+      </div>
+
+      <!-- メインの生成ボタン -->
+      <button class="btn-generate" id="generateBtn" disabled>
+        <span class="btn-icon">+</span>
+        プロンプト49枚を生成する
+      </button>
+    </div>
+
+    <!-- =================================================
+         結果表示セクション（生成後に表示される）
+         ================================================= -->
+    <section id="resultsSection">
+
+      <div class="results-header">
+        <h2>生成完了！プロンプトをコピーしてChatGPTへ</h2>
+      </div>
+
+      <div class="results-body">
+
+        <!-- (A) マスタープロンプト -->
+        <div class="master-prompt-block">
+          <h3>STEP A｜マスタープロンプト（最初にChatGPTへ貼る）</h3>
+          <p style="font-size:0.85rem; color:#5C6370; margin-bottom:12px;">
+            ChatGPTに参照画像を添付しながら、このプロンプトを最初に貼り付けてください。
+            キャラクターの設定が固定されます。
+          </p>
+          <!-- マスタープロンプトのテキスト（app.js が挿入） -->
+          <pre class="prompt-box" id="masterPromptText"></pre>
+          <!-- m-4修正: onclick をインラインから除去。イベントは app.js の DOMContentLoaded 内で登録 -->
+          <button class="btn-copy" id="masterCopyBtn">
+            マスタープロンプトをコピー
+          </button>
+        </div>
+
+        <!-- (C) 一括コピーボタン -->
+        <div class="bulk-copy-block">
+          <div>
+            <p>49枚分をすべてまとめてコピー</p>
+            <small>マスタープロンプト＋個別プロンプト49枚を番号付きで一括コピーします</small>
+          </div>
+          <!-- m-4修正: onclick をインラインから除去。イベントは app.js の DOMContentLoaded 内で登録 -->
+          <button class="btn-bulk-copy" id="bulkCopyBtn">
+            まとめてコピー（全50件）
+          </button>
+        </div>
+
+        <!-- (B) 個別プロンプト49個 -->
+        <div class="individual-prompts">
+          <h3>
+            STEP B｜個別プロンプト
+            <span class="prompt-count-badge" id="promptCount">49個</span>
+          </h3>
+          <p style="font-size:0.85rem; color:#5C6370; margin-bottom:16px;">
+            マスタープロンプトを貼った後、以下を1枚ずつ順番にChatGPTへ送信してください。<br>
+            各プロンプトの「コピー」ボタンを使うと便利です。
+          </p>
+
+          <!-- 個別プロンプトのリスト（app.js が自動生成） -->
+          <div id="individualPromptsList"></div>
+        </div>
+
+      </div><!-- /.results-body -->
+    </section><!-- /#resultsSection -->
+
+    <!-- =================================================
+         (D) 運用ガイド
+         ================================================= -->
+    <section class="guide-section">
+      <h2>運用ガイド &amp; LINE申請について</h2>
+
+      <!-- ChatGPTでの生成手順 -->
+      <div style="margin-bottom: 32px;">
+        <h3 style="font-size:0.95rem; font-weight:700; margin-bottom:14px; color:#1A1A2E;">
+          ChatGPTで画像を生成する手順
+        </h3>
+        <div class="how-to-steps">
+          <div class="how-to-step">
+            <div class="how-to-num">1</div>
+            <div class="how-to-content">
+              <strong>ChatGPTを開いて参照画像を添付する</strong>
+              <p>
+                ChatGPTの入力欄の画像添付ボタンから、このアプリでアップした参照画像を添付します。
+                複数枚ある場合は全て添付してください。
+              </p>
+            </div>
+          </div>
+          <div class="how-to-step">
+            <div class="how-to-num">2</div>
+            <div class="how-to-content">
+              <strong>マスタープロンプトを貼り付けて送信する</strong>
+              <p>
+                まず「マスタープロンプト」をコピーしてChatGPTに貼り付け、送信します。
+                これでキャラクターの設定が固定されます。
+              </p>
+            </div>
+          </div>
+          <div class="how-to-step">
+            <div class="how-to-num">3</div>
+            <div class="how-to-content">
+              <strong>個別プロンプトを1枚ずつ送る</strong>
+              <p>
+                スタンプ01から順番に個別プロンプトをコピーして貼り付けます。
+                生成された画像を保存してから次のプロンプトを送ってください。
+              </p>
+            </div>
+          </div>
+          <div class="how-to-step">
+            <div class="how-to-num">4</div>
+            <div class="how-to-content">
+              <strong>49枚の中から気に入った40枚を選ぶ</strong>
+              <p>
+                LINEスタンプの公式規格は最大40枚です。
+                49枚生成して気に入ったものを40枚選び、仕上げてから申請します。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 49→40枚の説明 -->
+      <div class="stamp-count-box">
+        <strong>なぜ49枚生成して40枚を選ぶの？</strong><br>
+        LINE Creator's Market への申請は最大40枚セットです。
+        49枚作って少し多めにストックを持ち、
+        <strong>できが良い40枚を厳選して申請</strong>することで、
+        審査通過率と完成度を上げることができます。
+        残りの9枚は次回申請のために取っておくこともできます。
+      </div>
+
+      <!-- LINE規格メモ -->
+      <div class="guide-cards">
+        <div class="guide-card">
+          <div class="guide-card-title">LINE スタンプ本体の規格</div>
+          <ul>
+            <li>サイズ：370 × 320 px</li>
+            <li>形式：PNG（透過背景）</li>
+            <li>ファイルサイズ：1 MB 以下</li>
+            <li>枚数：8〜40枚</li>
+          </ul>
+        </div>
+        <div class="guide-card">
+          <div class="guide-card-title">メイン画像・タブ画像</div>
+          <ul>
+            <li>メイン画像：240 × 240 px</li>
+            <li>タブ画像（アイコン）：96 × 74 px</li>
+            <li>どちらもPNG・透過なし可</li>
+            <li>スタンプ本体とは別に用意が必要</li>
+          </ul>
+        </div>
+        <div class="guide-card">
+          <div class="guide-card-title">申請の流れ</div>
+          <ul>
+            <li>LINE Creator's Market に登録</li>
+            <li>スタンプを申請（審査は約1週間）</li>
+            <li>承認後に価格設定して販売開始</li>
+            <li>売上の35%がクリエイターに分配</li>
+          </ul>
+        </div>
+        <div class="guide-card">
+          <div class="guide-card-title">ChatGPTの注意点</div>
+          <ul>
+            <li>GPT-4oなど画像生成対応版を使う</li>
+            <li>「背景透過」は最後に個別依頼する</li>
+            <li>気に入らない場合は「描き直して」でOK</li>
+            <li>一度に複数枚を頼むとブレが出やすい</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 審査対策・注意事項 -->
+      <div class="caution-box">
+        <h3>審査対策と注意事項（重要）</h3>
+        <ul>
+          <li>
+            <strong>AIの出力そのままでは審査に落ちる可能性があります。</strong>
+            背景透過・余白・文字の調整などを自分で行ってから申請してください。
+          </li>
+          <li>
+            他人の顔写真を無断で使用したスタンプはLINEの審査規約に違反します。
+            自分自身または許諾を得た方の画像のみ使用してください。
+          </li>
+          <li>
+            有名人・著名人・キャラクターの画像は著作権・肖像権の問題があり、
+            そのまま申請すると審査落ちまたはアカウント停止の原因になります。
+          </li>
+          <li>
+            生成された画像に不適切な表現・差別的内容が含まれていないか
+            必ず確認してから申請してください。
+          </li>
+        </ul>
+      </div>
+
+    </section><!-- /.guide-section -->
+
+  </main>
+
+  <!-- =====================================================
+       フッター
+       ===================================================== -->
+  <footer class="site-footer">
+    <p>LINEスタンプ プロンプトメーカー &mdash; 画像生成AIのAPIは使用していません</p>
+    <p style="margin-top:4px;">
+      生成されたプロンプトはChatGPT（GPT-4o）などの画像生成AIサービスで使用してください
+    </p>
+  </footer>
+
+  <!-- =====================================================
+       JavaScript の読み込み（data.js → app.js の順）
+       ===================================================== -->
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+
+</body>
+</html>
