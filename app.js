@@ -48,10 +48,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // 初期状態でボタンの有効/無効を確認
   updateGenerateButtonState();
 
-  // マスタープロンプト・シートプロンプト・一括コピーボタンのイベントを DOMContentLoaded 内で登録
+  // マスター・シート①②・一括コピーボタンのイベントを DOMContentLoaded 内で登録
   // オプショナルチェーン（?.）で要素が null の場合のエラーを防ぐ
   document.getElementById("masterCopyBtn")?.addEventListener("click", copyMasterPrompt);
-  document.getElementById("sheetCopyBtn")?.addEventListener("click", copySheetPrompt);
+  document.getElementById("sheet1CopyBtn")?.addEventListener("click", copySheet1Prompt);
+  document.getElementById("sheet2CopyBtn")?.addEventListener("click", copySheet2Prompt);
   document.getElementById("bulkCopyBtn")?.addEventListener("click", copyAllPrompts);
 });
 
@@ -436,20 +437,20 @@ function handleGenerate() {
     appState.images.length, appState.personCount, relObj
   );
 
-  // --- (B) 49個の個別プロンプトを生成する ---
+  // --- (B) 32個の個別プロンプトを生成する ---
   const individualPrompts = buildIndividualPrompts(
     wordList, convType, design, font,
     appState.personCount, relObj
   );
 
-  // --- (C) 7×7グリッドのシートプロンプトを生成する ---
-  const sheetPrompt = buildSheetPrompt(
+  // --- (C) 4×4グリッドのシートプロンプトを2枚（①1〜16番、②17〜32番）生成する ---
+  const sheetPrompts = buildSheetPrompts(
     wordList, convType, design, font,
     appState.personCount, relObj
   );
 
   // 結果を画面に表示する
-  renderResults(masterPrompt, individualPrompts, sheetPrompt);
+  renderResults(masterPrompt, individualPrompts, sheetPrompts);
 
   // 結果エリアまでスムーズスクロールする
   document.getElementById("resultsSection").scrollIntoView({ behavior: "smooth" });
@@ -560,7 +561,7 @@ ${stampCountRule}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ■ シリーズ制作の宣言
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-これからこのキャラクターで合計 49 枚のスタンプを
+これからこのキャラクターで合計 32 枚のスタンプを
 順番に生成します。
 
 表情・ポーズ・セリフは各スタンプで変わりますが、
@@ -573,28 +574,28 @@ ${stampCountRule}
 }
 
 /**
- * 49個の個別プロンプトを生成する
+ * 32個の個別プロンプトを生成する（wordList の先頭32件を使用）
  * @param {Array}       wordList    - スタンプ文言と表情ヒントの配列
  * @param {Object}      convType    - 変換タイプオブジェクト
  * @param {Object}      design      - デザイン系統オブジェクト
  * @param {Object}      font        - フォント感オブジェクト
  * @param {string}      personCount - 登場人数（"1"/"2"/"3"）
  * @param {Object|null} relObj      - 関係性オブジェクト（1名のときは null）
- * @returns {string[]} 49個のプロンプト文字列の配列
+ * @returns {string[]} 32個のプロンプト文字列の配列
  */
 function buildIndividualPrompts(wordList, convType, design, font, personCount, relObj) {
   const personCountNum = parseInt(personCount, 10) || 1;
 
-  // wordList が49個未満の場合は開発者向け警告を出す（サイレント減数の防止）
-  if (wordList.length < 49) {
+  // wordList が32個未満の場合は開発者向け警告を出す（サイレント減数の防止）
+  if (wordList.length < 32) {
     console.warn(
-      `[LINEスタンプメーカー] wordList が49個未満です（現在 ${wordList.length} 個）。` +
+      `[LINEスタンプメーカー] wordList が32個未満です（現在 ${wordList.length} 個）。` +
       "data.js の該当カテゴリを確認してください。"
     );
   }
 
   const prompts = [];
-  const total = Math.min(wordList.length, 49);
+  const total = Math.min(wordList.length, 32);
 
   for (let i = 0; i < total; i++) {
     const item = wordList[i];
@@ -625,25 +626,26 @@ function buildIndividualPrompts(wordList, convType, design, font, personCount, r
 }
 
 /**
- * 49種類のスタンプを7×7グリッド（1枚の画像）にまとめるシートプロンプトを生成する
- * 生成された画像は後で49枚に均等分割してLINEスタンプとして使用する前提。
+ * 32種類のスタンプを4×4グリッド（1枚の画像）×2枚に分けてシートプロンプトを生成する。
+ * シート①：スタンプ1〜16番（wordList[0..15]）
+ * シート②：スタンプ17〜32番（wordList[16..31]）
+ * 生成された各シートは後で16枚に均等分割してLINEスタンプとして使用する前提。
  *
- * @param {Array}       wordList    - スタンプ文言と表情ヒントの配列
+ * @param {Array}       wordList    - スタンプ文言と表情ヒントの配列（先頭32件を使用）
  * @param {Object}      convType    - 変換タイプオブジェクト
  * @param {Object}      design      - デザイン系統オブジェクト
  * @param {Object}      font        - フォント感オブジェクト
  * @param {string}      personCount - 登場人数（"1"/"2"/"3"）
  * @param {Object|null} relObj      - 関係性オブジェクト（1名のときは null）
- * @returns {string} シートプロンプトの文字列
+ * @returns {{ sheet1: string, sheet2: string }} 2枚分のシートプロンプト
  */
-function buildSheetPrompt(wordList, convType, design, font, personCount, relObj) {
+function buildSheetPrompts(wordList, convType, design, font, personCount, relObj) {
   const personCountNum = parseInt(personCount, 10) || 1;
-  const total = Math.min(wordList.length, 49);
 
-  // wordList が49個未満の場合は開発者向け警告を出す（サイレント減数の防止）
-  if (wordList.length < 49) {
+  // wordList が32個未満の場合は開発者向け警告を出す（サイレント減数の防止）
+  if (wordList.length < 32) {
     console.warn(
-      `[LINEスタンプメーカー] wordList が49個未満です（現在 ${wordList.length} 個）。` +
+      `[LINEスタンプメーカー] wordList が32個未満です（現在 ${wordList.length} 個）。` +
       "data.js の該当カテゴリを確認してください。"
     );
   }
@@ -653,12 +655,12 @@ function buildSheetPrompt(wordList, convType, design, font, personCount, relObj)
   if (personCountNum === 1) {
     personSection =
       `登場人数：1名\n` +
-      `参照画像の人物1名をキャラクター化し、全49マスで同一のキャラクターを描くこと。`;
+      `参照画像の人物1名をキャラクター化し、全マスで同一のキャラクターを描くこと。`;
   } else {
     const relationLabel = relObj ? relObj.label : "不問";
     const relationDesc  = relObj ? relObj.masterDesc : "自然な関係として描く。状況に合った自然な絡みややりとりを表現する";
 
-    // 全員強制ではなく「各マスのシーンに自然な人数」を登場させる方針に変更
+    // 全員強制ではなく「各マスのシーンに自然な人数」を登場させる方針
     personSection =
       `登場人数：最大${personCountNum}名（関係性：${relationLabel}）\n` +
       `参照画像から${personCountNum}名分のキャラクターを作成する。\n` +
@@ -668,109 +670,124 @@ function buildSheetPrompt(wordList, convType, design, font, personCount, relObj)
       `どのキャラクターを描く場合も、外見（顔・髪・服・体型・配色）は固定したまま描くこと。`;
   }
 
-  // 各マスの仕様を1行ずつ列挙する（buildIndividualPrompts と同じロジックで絡みヒントを反映）
-  const cellLines = [];
-  for (let i = 0; i < total; i++) {
-    const item = wordList[i];
-    const num  = String(i + 1).padStart(2, "0");
-
-    // 2名以上のときは絡み方ヒントを条件付きで付ける（全員強制ではなく2名以上登場時の指示として記載）
-    let interactionPart = "";
-    if (personCountNum >= 2 && relObj) {
-      interactionPart = `（2名以上登場する場合は${relObj.interactionHint}）`;
-    }
-
-    cellLines.push(
-      `マス${num}：表情/ポーズ＝${item.pose}${interactionPart}、セリフ＝「${item.text}」`
-    );
+  // 各マスの仕様行を生成するヘルパー（startIndex は 0始まりのオフセット、番号はスタンプ通し番号）
+  function buildCellLines(wordSlice, startIndex) {
+    return wordSlice.map((item, idx) => {
+      const num = String(startIndex + idx + 1).padStart(2, "0");
+      // 2名以上のときは絡み方ヒントを条件付きで付ける
+      let interactionPart = "";
+      if (personCountNum >= 2 && relObj) {
+        interactionPart = `（2名以上登場する場合は${relObj.interactionHint}）`;
+      }
+      return `マス${num}：表情/ポーズ＝${item.pose}${interactionPart}、セリフ＝「${item.text}」`;
+    });
   }
 
-  return `【シートプロンプト：49種類のスタンプを1枚の画像（7×7グリッド）にまとめて生成】
+  // 両シート共通のキャラ固定・スタイル・グリッド仕様ブロック
+  const charAndStyleBlock =
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+    `■ キャラクター固定ルール（最優先・絶対厳守）\n` +
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+    `参照画像の人物の以下の要素を完全に固定し、\n` +
+    `グリッド内の全16マスで一切変えないこと。\n` +
+    `キャラクターの一貫性がこのシートの最重要事項です。\n\n` +
+    `・顔立ち（目の形・大きさ、鼻・口・輪郭の形）\n` +
+    `・髪型（長さ・流れ・スタイル）と髪の色\n` +
+    `・体型・プロポーション\n` +
+    `・服装・衣装の色とデザイン\n` +
+    `・キャラクター全体の雰囲気・個性\n\n` +
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+    `■ 変換スタイル\n` +
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+    `${convType.promptText}\n\n` +
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+    `■ アートスタイル\n` +
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+    `${design.promptText}\n\n` +
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+    `■ 文字・フォント指定\n` +
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+    `スタンプ内のセリフ・文字は以下で表現すること：\n` +
+    `「${font.promptText}」（${font.label}で表示）\n\n` +
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+    `■ グリッドレイアウトの仕様（切り分けのために厳守）\n` +
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+    `この画像は生成後に16枚の個別スタンプに均等分割して使用するため、\n` +
+    `各マスが独立した1枚のスタンプとして完全に成立する構図にすること。\n\n` +
+    `・4行×4列の合計16マスで構成すること\n` +
+    `・全マスは完全に均等な正方形・同一サイズにし、\n` +
+    `　ピクセル単位でグリッドが整列していること（等分割しても各スタンプがズレずに切り出せる）\n` +
+    `・各キャラクターおよびセリフ文字は必ずそのマスの内側に完全に収まること\n` +
+    `　（マスの境界線を越えてはみ出してはならない・隣のマスに食い込まない）\n` +
+    `・マス間には均一な余白（ガター）を設け、境界が視認できるようにすること\n` +
+    `・各マスの背景は白または透明で全マス統一すること\n` +
+    `・グリッド全体は正方形に近い比率で生成すること`;
 
-添付した参照画像を参照して、以下の指示に従いLINEスタンプ用の画像を1枚生成してください。
+  // 共通の注意事項ブロック
+  const noticeBlock =
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+    `■ 注意事項\n` +
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+    `画像生成AIによっては16マス一括だと細部が乱れることがあります。\n` +
+    `うまくいかない場合は、4枚（1行4マスずつ）に分けて生成するか、\n` +
+    `マスタープロンプト＋個別プロンプト方式に切り替えてください。`;
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-■ 登場人数・関係性の設定
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${personSection}
+  // シート①（スタンプ1〜16番）
+  const cellLines1 = buildCellLines(wordList.slice(0, 16), 0);
+  const sheet1 =
+    `【シートプロンプト①：スタンプ1〜16番を1枚の画像（4×4グリッド）にまとめて生成】\n\n` +
+    `添付した参照画像を参照して、以下の指示に従いLINEスタンプ用の画像を1枚生成してください。\n\n` +
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+    `■ 登場人数・関係性の設定\n` +
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+    `${personSection}\n\n` +
+    `${charAndStyleBlock}\n\n` +
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+    `■ 各マスの仕様（16マス分）\n` +
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+    `左上から右方向へ、1行4マスずつ順番に配置してください。\n\n` +
+    `${cellLines1.join("\n")}\n\n` +
+    `${noticeBlock}`;
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-■ キャラクター固定ルール（最優先・絶対厳守）
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-参照画像の人物の以下の要素を完全に固定し、
-グリッド内の全49マスで一切変えないこと。
-キャラクターの一貫性がこのシートの最重要事項です。
+  // シート②（スタンプ17〜32番）
+  const cellLines2 = buildCellLines(wordList.slice(16, 32), 16);
+  const sheet2 =
+    `【シートプロンプト②：スタンプ17〜32番を1枚の画像（4×4グリッド）にまとめて生成】\n\n` +
+    `添付した参照画像を参照して、以下の指示に従いLINEスタンプ用の画像を1枚生成してください。\n\n` +
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+    `■ 登場人数・関係性の設定\n` +
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+    `${personSection}\n\n` +
+    `${charAndStyleBlock}\n\n` +
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+    `■ 各マスの仕様（16マス分）\n` +
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+    `左上から右方向へ、1行4マスずつ順番に配置してください。\n\n` +
+    `${cellLines2.join("\n")}\n\n` +
+    `${noticeBlock}`;
 
-・顔立ち（目の形・大きさ、鼻・口・輪郭の形）
-・髪型（長さ・流れ・スタイル）と髪の色
-・体型・プロポーション
-・服装・衣装の色とデザイン
-・キャラクター全体の雰囲気・個性
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-■ 変換スタイル
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${convType.promptText}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-■ アートスタイル
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${design.promptText}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-■ 文字・フォント指定
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-スタンプ内のセリフ・文字は以下で表現すること：
-「${font.promptText}」（${font.label}で表示）
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-■ グリッドレイアウトの仕様（切り分けのために厳守）
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-この画像は生成後に49枚の個別スタンプに均等分割して使用するため、
-各マスが独立した1枚のスタンプとして完全に成立する構図にすること。
-
-・7行×7列の合計49マスで構成すること
-・全マスは完全に均等な正方形・同一サイズにし、
-　ピクセル単位でグリッドが整列していること（等分割しても各スタンプがズレずに切り出せる）
-・各キャラクターおよびセリフ文字は必ずそのマスの内側に完全に収まること
-　（マスの境界線を越えてはみ出してはならない・隣のマスに食い込まない）
-・マス間には均一な余白（ガター）を設け、境界が視認できるようにすること
-・各マスの背景は白または透明で全マス統一すること
-・グリッド全体は正方形に近い比率で生成すること
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-■ 各マスの仕様（49マス分）
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-左上から右方向へ、1行7マスずつ順番に配置してください。
-
-${cellLines.join("\n")}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-■ 注意事項
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-画像生成AIによっては49マス一括だと細部が乱れることがあります。
-うまくいかない場合は、7枚（1行7マスずつ）に分けて生成するか、
-マスタープロンプト＋個別プロンプト方式に切り替えてください。`;
+  return { sheet1, sheet2 };
 }
 
 /* =====================================================
  * 結果の表示処理
  * ===================================================== */
-function renderResults(masterPrompt, individualPrompts, sheetPrompt) {
+function renderResults(masterPrompt, individualPrompts, sheetPrompts) {
   const section = document.getElementById("resultsSection");
   section.style.display = "block";
 
   // マスタープロンプトを表示する
   document.getElementById("masterPromptText").textContent = masterPrompt;
 
-  // シートプロンプトを表示する
-  document.getElementById("sheetPromptText").textContent = sheetPrompt;
+  // シートプロンプト①②をそれぞれ表示する
+  document.getElementById("sheet1PromptText").textContent = sheetPrompts.sheet1;
+  document.getElementById("sheet2PromptText").textContent = sheetPrompts.sheet2;
 
-  // 49枚一括コピー用のテキストを準備する
+  // 32枚一括コピー用のテキストを準備する
   const allText =
     "【マスタープロンプト】\n" + masterPrompt + "\n\n" +
     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-    "【個別プロンプト 49枚】\n" +
+    "【個別プロンプト 32枚】\n" +
     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" +
     individualPrompts.join("\n\n");
 
@@ -869,10 +886,17 @@ function copyMasterPrompt() {
   copyToClipboard(text, btn);
 }
 
-// シートプロンプトのコピーボタン
-function copySheetPrompt() {
-  const text = document.getElementById("sheetPromptText").textContent;
-  const btn  = document.getElementById("sheetCopyBtn");
+// シートプロンプト①のコピーボタン（スタンプ1〜16番）
+function copySheet1Prompt() {
+  const text = document.getElementById("sheet1PromptText").textContent;
+  const btn  = document.getElementById("sheet1CopyBtn");
+  copyToClipboard(text, btn);
+}
+
+// シートプロンプト②のコピーボタン（スタンプ17〜32番）
+function copySheet2Prompt() {
+  const text = document.getElementById("sheet2PromptText").textContent;
+  const btn  = document.getElementById("sheet2CopyBtn");
   copyToClipboard(text, btn);
 }
 

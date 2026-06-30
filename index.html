@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description"
-    content="LINEスタンプ用のプロンプトを自動生成。ChatGPTに貼るだけでオリジナルキャラのスタンプ49枚分のプロンプトが完成。" />
+    content="LINEスタンプ用のプロンプトを自動生成。ChatGPTに貼るだけでオリジナルキャラのスタンプ32枚分のプロンプトが完成。" />
   <title>LINEスタンプ プロンプトメーカー</title>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -18,7 +18,7 @@
     <h1>LINEスタンプ<br>プロンプトメーカー</h1>
     <p class="header-subtitle">
       参照画像をアップして設定を選ぶだけで、<br>
-      ChatGPTに貼り付けるプロンプトが49枚分まとめて完成
+      ChatGPTに貼り付けるプロンプトが32枚分まとめて完成
     </p>
   </header>
 
@@ -43,7 +43,7 @@
         <span class="flow-arrow">→</span>
         <div class="flow-step">
           <div class="flow-step-num">3</div>
-          <span>個別プロンプトを1枚ずつ貼って<br>49枚を生成する</span>
+          <span>個別プロンプトを1枚ずつ貼って<br>32枚を生成する</span>
         </div>
         <span class="flow-arrow">→</span>
         <div class="flow-step">
@@ -159,7 +159,7 @@
         <div class="step-badge">5</div>
         <div>
           <div class="section-title">スタンプの用途を選んでください</div>
-          <div class="section-subtitle">選んだ用途に合わせて49個のセリフが決まります</div>
+          <div class="section-subtitle">選んだ用途に合わせて32個のセリフが決まります</div>
         </div>
       </div>
 
@@ -208,7 +208,7 @@
       <!-- メインの生成ボタン -->
       <button class="btn-generate" id="generateBtn" disabled>
         <span class="btn-icon">+</span>
-        プロンプト49枚を生成する
+        プロンプト32枚を生成する
       </button>
     </div>
 
@@ -237,37 +237,52 @@
           </button>
         </div>
 
-        <!-- (A2) シートプロンプト（49枚を1枚の画像にまとめる方式） -->
+        <!-- (A2) シートプロンプト①（スタンプ1〜16番：4×4グリッド） -->
         <div class="master-prompt-block sheet-prompt-block">
-          <h3>STEP A2｜シートプロンプト（49枚を1枚の画像にまとめる）</h3>
+          <h3>STEP A2｜シートプロンプト①（1〜16番を1枚の画像にまとめる）</h3>
           <p style="font-size:0.85rem; color:#5C6370; margin-bottom:12px;">
-            1回の送信で7×7グリッド（49マス）をまとめて生成する方式です。<br>
+            4×4グリッド（16マス）を1回の送信でまとめて生成する方式です。<br>
             マスタープロンプトの<strong>代わりに</strong>このプロンプトをChatGPTに送ってください。<br>
-            生成された1枚の画像を後で49枚に切り分けてLINEに申請します。
+            生成された1枚の画像を後で16枚に切り分けてLINEに申請します。
           </p>
-          <!-- シートプロンプトのテキスト（app.js が挿入） -->
-          <pre class="prompt-box" id="sheetPromptText"></pre>
-          <button class="btn-copy" id="sheetCopyBtn">
-            シートプロンプトをコピー
+          <!-- シートプロンプト①のテキスト（app.js が挿入） -->
+          <pre class="prompt-box" id="sheet1PromptText"></pre>
+          <button class="btn-copy" id="sheet1CopyBtn">
+            シート①をコピー（1〜16番）
+          </button>
+        </div>
+
+        <!-- (A3) シートプロンプト②（スタンプ17〜32番：4×4グリッド） -->
+        <div class="master-prompt-block sheet-prompt-block">
+          <h3>STEP A3｜シートプロンプト②（17〜32番を1枚の画像にまとめる）</h3>
+          <p style="font-size:0.85rem; color:#5C6370; margin-bottom:12px;">
+            4×4グリッド（16マス）を1回の送信でまとめて生成する方式です。<br>
+            シート①を生成した後、同じChatGPTのチャットにこのプロンプトを続けて送ってください。<br>
+            生成された1枚の画像を後で16枚に切り分けてLINEに申請します。
+          </p>
+          <!-- シートプロンプト②のテキスト（app.js が挿入） -->
+          <pre class="prompt-box" id="sheet2PromptText"></pre>
+          <button class="btn-copy" id="sheet2CopyBtn">
+            シート②をコピー（17〜32番）
           </button>
         </div>
 
         <!-- (C) 一括コピーボタン -->
         <div class="bulk-copy-block">
           <div>
-            <p>49枚分をすべてまとめてコピー</p>
-            <small>マスタープロンプト＋個別プロンプト49枚を番号付きで一括コピーします</small>
+            <p>32枚分をすべてまとめてコピー</p>
+            <small>マスタープロンプト＋個別プロンプト32枚を番号付きで一括コピーします</small>
           </div>
           <button class="btn-bulk-copy" id="bulkCopyBtn">
-            まとめてコピー（全50件）
+            まとめてコピー（全33件）
           </button>
         </div>
 
-        <!-- (B) 個別プロンプト49個 -->
+        <!-- (B) 個別プロンプト32個 -->
         <div class="individual-prompts">
           <h3>
             STEP B｜個別プロンプト
-            <span class="prompt-count-badge" id="promptCount">49個</span>
+            <span class="prompt-count-badge" id="promptCount">32個</span>
           </h3>
           <p style="font-size:0.85rem; color:#5C6370; margin-bottom:16px;">
             マスタープロンプトを貼った後、以下を1枚ずつ順番にChatGPTへ送信してください。<br>
@@ -326,24 +341,22 @@
           <div class="how-to-step">
             <div class="how-to-num">4</div>
             <div class="how-to-content">
-              <strong>49枚の中から気に入った40枚を選ぶ</strong>
+              <strong>32枚の中から好きなものを選んでLINEに申請する</strong>
               <p>
-                LINEスタンプの公式規格は最大40枚です。
-                49枚生成して気に入ったものを40枚選び、仕上げてから申請します。
+                LINEスタンプの公式規格は8〜40枚セットです。
+                32枚生成して気に入ったものを選び、仕上げてから申請します。
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 49→40枚の説明 -->
+      <!-- 32枚構成の説明 -->
       <div class="stamp-count-box">
-        <strong>なぜ49枚生成して40枚を選ぶの？</strong><br>
-        LINE Creator's Market への申請は最大40枚セットです。
-        49枚作って少し多めにストックを持ち、
-        <strong>できが良い40枚を厳選して申請</strong>することで、
-        審査通過率と完成度を上げることができます。
-        残りの9枚は次回申請のために取っておくこともできます。
+        <strong>32枚構成について</strong><br>
+        LINE Creator's Market への申請は8〜40枚セットです。
+        32枚生成して仕上げ、<strong>すべてまたは好きな枚数を選んでLINEに申請</strong>できます。
+        気に入ったものだけを選んで申請しましょう。
       </div>
 
       <!-- LINE規格メモ -->
