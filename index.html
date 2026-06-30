@@ -27,6 +27,66 @@
        ===================================================== -->
   <main class="main-container">
 
+    <!-- =====================================================
+         兄弟スタンプ（固定スタイル）プリセットバナー
+         ─ チェックをONにするだけで固定キャラ・絵柄のプロンプトを即生成
+         ===================================================== -->
+    <div class="preset-banner" id="stepBrotherPreset">
+
+      <!-- バナー上段：タイトル + トグルスイッチ -->
+      <div class="preset-banner-main">
+        <div class="preset-icon-wrap">
+          <span class="preset-icon-emoji">&#129306;</span><!-- 🧒 -->
+        </div>
+        <div class="preset-banner-text">
+          <div class="preset-banner-title">兄弟スタンプ（お母さん＋兄弟・固定スタイル）</div>
+          <div class="preset-banner-desc">
+            登場人物・絵柄・文字スタイルが固定済み。<br>
+            ONにするだけで育児・日常テーマの32枚プロンプトを即生成できます
+          </div>
+        </div>
+        <label class="toggle-switch" aria-label="兄弟スタンプ（固定スタイル）プリセットのON/OFF">
+          <input type="checkbox" id="brotherPresetCheck" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <!-- プリセットON時のみ表示される詳細エリア（初期非表示） -->
+      <div id="brotherPresetDetails" class="preset-details" style="display:none;">
+
+        <!-- プリセット有効の説明 -->
+        <div class="preset-active-note">
+          <strong>プリセット有効：</strong>
+          キャラ・絵柄・文字スタイルは固定済みです。STEP 2〜7 の選択は不要です。
+          STEP 1 の参照画像のアップロードと権利確認チェックだけ行ってください。
+        </div>
+
+        <!-- 背景色の選択（クロマキー処理用） -->
+        <div class="bg-color-group">
+          <div class="bg-color-group-title">背景色を選んでください（透過処理で抜く用）</div>
+          <div class="bg-color-options">
+            <label class="bg-color-option" id="bgColorGreenLabel">
+              <input type="radio" name="brotherBg" value="green" checked />
+              <span class="bg-swatch" style="background:#00B140;"></span>
+              <div class="bg-option-info">
+                <div class="bg-option-name">クロマキーグリーン（推奨）</div>
+                <div class="bg-option-desc">#00B140 の均一なベタ塗り</div>
+              </div>
+            </label>
+            <label class="bg-color-option" id="bgColorBlackLabel">
+              <input type="radio" name="brotherBg" value="black" />
+              <span class="bg-swatch bg-swatch-black"></span>
+              <div class="bg-option-info">
+                <div class="bg-option-name">ブラック</div>
+                <div class="bg-option-desc">#000000 のベタ塗り（髪・服への黒使用回避指示付き）</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+      </div><!-- /#brotherPresetDetails -->
+    </div><!-- /.preset-banner -->
+
     <!-- 利用の流れ説明バナー -->
     <div class="flow-banner">
       <h2>このアプリの使い方</h2>
@@ -222,6 +282,16 @@
       </div>
 
       <div class="results-body">
+
+        <!-- 兄弟スタンププリセット使用時の参照画像案内（プリセットON時のみ表示） -->
+        <div id="brotherRefHint" class="brother-ref-hint" style="display:none;">
+          <strong>参照画像について：</strong>
+          ChatGPTに
+          <code>brother-stamp-style/references/</code>
+          フォルダ内の手本2枚
+          （手本01_おむつ替えてくる.png・手本02_ねんねして.png）を
+          添付してから、下のマスタープロンプトを貼り付けてください。
+        </div>
 
         <!-- (A) マスタープロンプト -->
         <div class="master-prompt-block">

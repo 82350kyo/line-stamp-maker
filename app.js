@@ -10,14 +10,16 @@
  * アプリの状態（ユーザーが選んだ内容を記録する）
  * ===================================================== */
 const appState = {
-  images: [],           // アップロードされた画像（File オブジェクト）
-  consent: false,       // 権利同意チェックボックスの状態
-  personCount: null,    // 登場人数（"1" / "2" / "3"）
-  relationship: null,   // 関係性（"parent_child" など。2名以上のときのみ必須）
-  conversionType: null, // 変換タイプ（"character" など）
-  usage: null,          // 用途カテゴリ（"greeting" など）
-  designStyle: null,    // デザイン系統（"illustration" など）
-  fontStyle: null,      // フォント感（"marugo" など）
+  images: [],              // アップロードされた画像（File オブジェクト）
+  consent: false,          // 権利同意チェックボックスの状態
+  personCount: null,       // 登場人数（"1" / "2" / "3"）
+  relationship: null,      // 関係性（"parent_child" など。2名以上のときのみ必須）
+  conversionType: null,    // 変換タイプ（"character" など）
+  usage: null,             // 用途カテゴリ（"greeting" など）
+  designStyle: null,       // デザイン系統（"illustration" など）
+  fontStyle: null,         // フォント感（"marugo" など）
+  brotherPresetOn: false,  // 兄弟スタンプ（固定スタイル）プリセットのON/OFF
+  brotherBgColor: "green", // 背景色（"green"=クロマキーグリーン / "black"=ブラック）
 };
 
 /* =====================================================
@@ -54,6 +56,9 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("sheet1CopyBtn")?.addEventListener("click", copySheet1Prompt);
   document.getElementById("sheet2CopyBtn")?.addEventListener("click", copySheet2Prompt);
   document.getElementById("bulkCopyBtn")?.addEventListener("click", copyAllPrompts);
+
+  // 兄弟スタンプ（固定スタイル）プリセットの初期設定
+  setupBrotherPreset();
 });
 
 /* =====================================================
@@ -361,55 +366,85 @@ function setupGenerateButton() {
 
 /**
  * 全条件が揃っているかチェックして生成ボタンの状態を更新する
- * 条件：画像≥1 / 同意 / 人数 / （2名以上なら関係） / 変換タイプ / 用途 / デザイン / フォント
+ * ─ プリセットON時：画像 ≥ 1 枚 & 同意チェック のみ必須
+ * ─ 通常モード：画像≥1 / 同意 / 人数 / （2名以上なら関係） / 変換タイプ / 用途 / デザイン / フォント
  */
 function updateGenerateButtonState() {
   const btn = document.getElementById("generateBtn");
   if (!btn) return;
 
-  // 2名以上のときは関係性の選択も必須とする
-  const personCountNum = parseInt(appState.personCount, 10) || 0;
-  const relationshipRequired = personCountNum >= 2;
+  const hintEl  = document.getElementById("generateHint");
+  let   isReady = false;
 
-  const isReady =
-    appState.images.length >= 1 &&
-    appState.consent &&
-    appState.personCount !== null &&
-    (!relationshipRequired || appState.relationship !== null) &&
-    appState.conversionType !== null &&
-    appState.usage !== null &&
-    appState.designStyle !== null &&
-    appState.fontStyle !== null;
+  if (appState.brotherPresetOn) {
+    // ─── プリセットON時：画像 ≥ 1 & 同意 のみ確認 ───
+    isReady = appState.images.length >= 1 && appState.consent;
 
-  btn.disabled = !isReady;
+    if (hintEl) {
+      if (isReady) {
+        hintEl.textContent = "すべての設定が完了しました！生成ボタンを押してください。";
+        hintEl.className   = "generate-hint ready";
+      } else {
+        const missing = [];
+        if (appState.images.length === 0) missing.push("参照画像のアップロード");
+        if (!appState.consent)            missing.push("権利確認チェックボックス");
+        hintEl.textContent = "未完了：" + missing.join("、");
+        hintEl.className   = "generate-hint pending";
+      }
+    }
+  } else {
+    // ─── 通常モード：既存の全条件チェック ───
+    const personCountNum       = parseInt(appState.personCount, 10) || 0;
+    const relationshipRequired = personCountNum >= 2;
 
-  // 未完了の項目をヒント表示する
-  const hintEl = document.getElementById("generateHint");
-  if (hintEl) {
-    if (isReady) {
-      hintEl.textContent = "すべての設定が完了しました！生成ボタンを押してください。";
-      hintEl.className = "generate-hint ready";
-    } else {
-      const missing = [];
-      if (appState.images.length === 0) missing.push("参照画像のアップロード");
-      if (!appState.consent)          missing.push("権利確認チェックボックス");
-      if (!appState.personCount)      missing.push("登場人数");
-      if (relationshipRequired && !appState.relationship) missing.push("関係");
-      if (!appState.conversionType)   missing.push("変換タイプ");
-      if (!appState.usage)            missing.push("用途");
-      if (!appState.designStyle)      missing.push("デザイン系統");
-      if (!appState.fontStyle)        missing.push("フォント感");
-      hintEl.textContent = "未完了：" + missing.join("、");
-      hintEl.className = "generate-hint pending";
+    isReady =
+      appState.images.length >= 1 &&
+      appState.consent &&
+      appState.personCount !== null &&
+      (!relationshipRequired || appState.relationship !== null) &&
+      appState.conversionType !== null &&
+      appState.usage !== null &&
+      appState.designStyle !== null &&
+      appState.fontStyle !== null;
+
+    if (hintEl) {
+      if (isReady) {
+        hintEl.textContent = "すべての設定が完了しました！生成ボタンを押してください。";
+        hintEl.className   = "generate-hint ready";
+      } else {
+        const missing = [];
+        if (appState.images.length === 0) missing.push("参照画像のアップロード");
+        if (!appState.consent)            missing.push("権利確認チェックボックス");
+        if (!appState.personCount)        missing.push("登場人数");
+        if (relationshipRequired && !appState.relationship) missing.push("関係");
+        if (!appState.conversionType)     missing.push("変換タイプ");
+        if (!appState.usage)              missing.push("用途");
+        if (!appState.designStyle)        missing.push("デザイン系統");
+        if (!appState.fontStyle)          missing.push("フォント感");
+        hintEl.textContent = "未完了：" + missing.join("、");
+        hintEl.className   = "generate-hint pending";
+      }
     }
   }
+
+  btn.disabled = !isReady;
 }
 
 /* =====================================================
  * プロンプト生成処理（アプリの核心機能）
  * ===================================================== */
 function handleGenerate() {
-  // 選んだ設定のオブジェクトを取得する
+  // プリセットON時は兄弟スタンプ専用フローで生成して早期リターンする
+  if (appState.brotherPresetOn) {
+    const masterPrompt      = buildBrotherMasterPrompt(appState.brotherBgColor);
+    const individualPrompts = buildBrotherIndividualPrompts(appState.brotherBgColor);
+    // sheetPrompts に null を渡すとシートブロック非表示・参照ヒント表示に切り替わる
+    renderResults(masterPrompt, individualPrompts, null);
+    document.getElementById("resultsSection").scrollIntoView({ behavior: "smooth" });
+    return;
+  }
+
+  // 通常モード：選んだ設定のオブジェクトを取得する
   const convType   = CONVERSION_TYPES.find((c) => c.value === appState.conversionType);
   const usageCat   = USAGE_CATEGORIES.find((u) => u.value === appState.usage);
   const design     = DESIGN_STYLES.find((d) => d.value === appState.designStyle);
@@ -776,12 +811,24 @@ function renderResults(masterPrompt, individualPrompts, sheetPrompts) {
   const section = document.getElementById("resultsSection");
   section.style.display = "block";
 
+  // sheetPrompts が null のとき = プリセットON（シートなし）モード
+  const isPreset = sheetPrompts === null;
+
   // マスタープロンプトを表示する
   document.getElementById("masterPromptText").textContent = masterPrompt;
 
-  // シートプロンプト①②をそれぞれ表示する
-  document.getElementById("sheet1PromptText").textContent = sheetPrompts.sheet1;
-  document.getElementById("sheet2PromptText").textContent = sheetPrompts.sheet2;
+  // プリセット時はシートブロックを非表示にし、参照画像ヒントを表示する
+  document.querySelectorAll(".sheet-prompt-block").forEach((el) => {
+    el.style.display = isPreset ? "none" : "";
+  });
+  const refHint = document.getElementById("brotherRefHint");
+  if (refHint) refHint.style.display = isPreset ? "block" : "none";
+
+  // シートプロンプト①②はプリセットOFFのときのみ表示する
+  if (!isPreset) {
+    document.getElementById("sheet1PromptText").textContent = sheetPrompts.sheet1;
+    document.getElementById("sheet2PromptText").textContent = sheetPrompts.sheet2;
+  }
 
   // 32枚一括コピー用のテキストを準備する
   const allText =
@@ -931,4 +978,111 @@ function showAlert(message) {
     toast.classList.remove("show");
     setTimeout(() => document.body.removeChild(toast), 400);
   }, 3000);
+}
+
+/* =====================================================
+ * 兄弟スタンプ（固定スタイル）プリセット機能
+ * ===================================================== */
+
+/**
+ * 兄弟スタンププリセットの初期設定（DOMContentLoaded から呼ばれる）
+ * ─ チェックボックスON/OFFで汎用選択セクション（STEP 2〜7）を表示/非表示する
+ * ─ 背景色ラジオボタンの変更を appState.brotherBgColor に反映する
+ */
+function setupBrotherPreset() {
+  const checkbox = document.getElementById("brotherPresetCheck");
+  if (!checkbox) return;
+
+  // プリセットON/OFFトグル
+  checkbox.addEventListener("change", () => {
+    appState.brotherPresetOn = checkbox.checked;
+
+    // プリセット詳細エリア（背景色選択・案内文）の表示/非表示
+    const details = document.getElementById("brotherPresetDetails");
+    if (details) details.style.display = checkbox.checked ? "block" : "none";
+
+    // 汎用選択セクション（STEP 2〜7）の表示/非表示
+    // ─ プリセットON時は非表示にして固定スタイルで上書きする
+    const genericSectionIds = [
+      "stepPersonCount",  // STEP 2: 登場人数
+      "stepRelationship", // STEP 3: 関係性
+      "step2",            // STEP 4: 変換タイプ
+      "step3",            // STEP 5: 用途
+      "step4",            // STEP 6: デザイン系統
+      "step5",            // STEP 7: フォント感
+    ];
+    genericSectionIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = checkbox.checked ? "none" : "";
+    });
+
+    // プリセットOFFに戻したとき、関係性セクションは
+    // 登場人数の選択状態に応じて表示する（handlePersonCountChange と同じロジック）
+    if (!checkbox.checked) {
+      const personCountNum = parseInt(appState.personCount, 10) || 0;
+      const relSection     = document.getElementById("stepRelationship");
+      if (relSection) {
+        relSection.style.display = personCountNum >= 2 ? "block" : "none";
+      }
+    }
+
+    updateGenerateButtonState();
+  });
+
+  // 背景色ラジオボタンの変更を appState に反映する
+  document.querySelectorAll('[name="brotherBg"]').forEach((radio) => {
+    radio.addEventListener("change", () => {
+      appState.brotherBgColor = radio.value;
+    });
+  });
+}
+
+/**
+ * 兄弟スタンプ（固定スタイル）のマスタープロンプトを生成する
+ * ─ BROTHER_STAMP_PRESET.masterBase の {{BG_TEXT}} を
+ *   選択した背景色の指定文言に置き換えて返す
+ * @param {string} bgColor - "green"（クロマキーグリーン）または "black"（ブラック）
+ * @returns {string} 生成されたマスタープロンプト
+ */
+function buildBrotherMasterPrompt(bgColor) {
+  const bgText = bgColor === "black"
+    ? BROTHER_STAMP_PRESET.bgTextBlack
+    : BROTHER_STAMP_PRESET.bgTextGreen;
+  return BROTHER_STAMP_PRESET.masterBase.replace("{{BG_TEXT}}", bgText);
+}
+
+/**
+ * 兄弟スタンプ（固定スタイル）の個別プロンプト 32 個を生成する
+ * ─ STAMP_DATA.parenting（育児系）の先頭 32 件を使用する
+ * ─ キャラ・絵柄・文字は固定スタイルで上書き済みのため
+ *   表情/ポーズ・セリフ・背景色の指定のみで完結させる
+ * ─ 「セリフ・シーンに自然な人数（1〜3人）で描く」を毎プロンプトに含める
+ * @param {string} bgColor - "green" または "black"
+ * @returns {string[]} 32 個のプロンプト文字列の配列
+ */
+function buildBrotherIndividualPrompts(bgColor) {
+  const bgLabel = bgColor === "black"
+    ? "真っ黒（#000000）のベタ塗り"
+    : "クロマキーグリーン（#00B140）のベタ塗り";
+
+  const wordList = STAMP_DATA.parenting;
+  const total    = Math.min(wordList.length, 32);
+  const prompts  = [];
+
+  for (let i = 0; i < total; i++) {
+    const item = wordList[i];
+    const num  = String(i + 1).padStart(2, "0");
+
+    const prompt =
+      `【スタンプ${num}】\n` +
+      `上のマスター設定のキャラ・絵柄で、以下の1枚を生成してください。\n` +
+      `・表情とポーズ：${item.pose}\n` +
+      `・セリフ：「${item.text}」を丸ゴシック太字・クリーム縁取り・語尾オレンジで表示\n` +
+      `・登場人数：このセリフ・シーンに最も自然な人数（1〜3人）で描くこと（お母さんだけ／兄弟だけ／3人、いずれも可）\n` +
+      `・背景：${bgLabel}`;
+
+    prompts.push(prompt);
+  }
+
+  return prompts;
 }

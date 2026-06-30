@@ -1070,6 +1070,231 @@ button {
 }
 
 /* =====================================================
+ * 兄弟スタンプ（固定スタイル）プリセットバナー
+ * ===================================================== */
+
+/* バナー全体（流れ説明バナーの直前に表示） */
+.preset-banner {
+  background: linear-gradient(135deg, #FFF8EE 0%, #FFF3E0 100%);
+  border: 2px solid #FFCC7A;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+  box-shadow: 0 2px 8px rgba(255, 160, 0, 0.12);
+}
+
+/* バナー上段：アイコン + テキスト + トグル */
+.preset-banner-main {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.preset-icon-wrap {
+  flex-shrink: 0;
+}
+
+.preset-icon-emoji {
+  font-size: 2.4rem;
+  line-height: 1;
+}
+
+.preset-banner-text {
+  flex: 1;
+}
+
+.preset-banner-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #7A4800;
+  margin-bottom: 4px;
+}
+
+.preset-banner-desc {
+  font-size: 0.84rem;
+  color: #9A6100;
+  line-height: 1.5;
+}
+
+/* トグルスイッチ */
+.toggle-switch {
+  flex-shrink: 0;
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.toggle-switch input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: #C0C7D0;
+  border-radius: 9999px;
+  transition: background var(--transition);
+}
+
+.toggle-slider::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  transition: transform var(--transition);
+}
+
+.toggle-switch input[type="checkbox"]:checked + .toggle-slider {
+  background: #F5A623; /* ゴールドオレンジ（プリセットアクティブ色） */
+}
+
+.toggle-switch input[type="checkbox"]:checked + .toggle-slider::after {
+  transform: translateX(24px);
+}
+
+/* プリセットON時に展開される詳細エリア */
+.preset-details {
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-lg);
+  border-top: 1px dashed #FFCC7A;
+}
+
+/* プリセット有効の説明ノート */
+.preset-active-note {
+  background: #FFF3CD;
+  border: 1px solid #FFD966;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  font-size: 0.86rem;
+  color: #7A4800;
+  line-height: 1.6;
+  margin-bottom: var(--spacing-lg);
+}
+
+.preset-active-note strong {
+  color: #5A3200;
+}
+
+/* 背景色選択グループ */
+.bg-color-group {
+  margin-bottom: var(--spacing-md);
+}
+
+.bg-color-group-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #7A4800;
+  margin-bottom: var(--spacing-md);
+}
+
+.bg-color-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+/* 背景色ラジオボタン（カード風） */
+.bg-color-option {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: #fff;
+  border: 2px solid #E2E8F0;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition);
+  min-width: 240px;
+}
+
+.bg-color-option:hover {
+  border-color: #F5A623;
+  box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.15);
+}
+
+.bg-color-option input[type="radio"] {
+  accent-color: #F5A623;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.bg-color-option:has(input[type="radio"]:checked) {
+  border-color: #F5A623;
+  background: #FFF8EE;
+  box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.2);
+}
+
+/* 背景色スウォッチ（色見本の四角） */
+.bg-swatch {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid rgba(0,0,0,0.15);
+  flex-shrink: 0;
+}
+
+.bg-swatch-black {
+  background: #000000;
+  border-color: #555;
+}
+
+.bg-option-info {
+  flex: 1;
+}
+
+.bg-option-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--color-text-main);
+}
+
+.bg-option-desc {
+  font-size: 0.78rem;
+  color: var(--color-text-sub);
+  margin-top: 2px;
+}
+
+/* 結果エリア内：兄弟スタンプ用参照画像ヒント */
+.brother-ref-hint {
+  background: #FFF3CD;
+  border: 1px solid #FFD966;
+  border-left: 4px solid #F5A623;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+  font-size: 0.88rem;
+  color: #7A4800;
+  line-height: 1.65;
+}
+
+.brother-ref-hint strong {
+  color: #5A3200;
+}
+
+.brother-ref-hint code {
+  background: rgba(122, 72, 0, 0.1);
+  border: 1px solid rgba(122, 72, 0, 0.2);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-family: "Courier New", "Osaka-Mono", monospace;
+  font-size: 0.82rem;
+  word-break: break-all;
+}
+
+/* =====================================================
  * スクロールバーのスタイル（モダンブラウザ）
  * ===================================================== */
 .prompt-box::-webkit-scrollbar {
