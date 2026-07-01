@@ -17,10 +17,52 @@ const appState = {
   conversionType: null,    // 変換タイプ（"character" など）
   usage: null,             // 用途カテゴリ（"greeting" など）
   designStyle: null,       // デザイン系統（"illustration" など）
-  fontStyle: null,         // フォント感（"marugo" など）
   brotherPresetOn: false,  // 兄弟スタンプ（固定スタイル）プリセットのON/OFF
-  brotherBgColor: "green", // 背景色（"green"=クロマキーグリーン / "black"=ブラック）
+  // ── 新規追加フィールド（UIから更新されるまでは既定値で動作）──
+  totalCount: "32",        // 生成枚数（TOTAL_COUNTS の value）
+  gridLayout: "1",         // まとめ方（GRID_LAYOUTS の value。"1"=個別）
+  background: "green",     // 背景種別（BACKGROUNDS の value）
+  font: "marugo",          // フォント種別（FONTS の value）
+  textColor: "brown_cream",// 文字色種別（TEXT_COLORS の value）
 };
+
+/* =====================================================
+ * 背景・フォント・文字色のヘルパー関数
+ * appState の値から対応するオブジェクトを取得する。
+ * 見つからない場合は配列の先頭にフォールバックする。
+ * ===================================================== */
+
+/** 現在選択中の背景オブジェクトを返す */
+function getBg() {
+  return BACKGROUNDS.find((b) => b.value === appState.background) || BACKGROUNDS[0];
+}
+
+/** 現在選択中のフォントオブジェクトを返す */
+function getFont() {
+  return FONTS.find((f) => f.value === appState.font) || FONTS[0];
+}
+
+/** 現在選択中の文字色オブジェクトを返す */
+function getTextColor() {
+  return TEXT_COLORS.find((c) => c.value === appState.textColor) || TEXT_COLORS[0];
+}
+
+/**
+ * 背景と文字色が同系色で視認性が下がるコンビかどうかを返す
+ * ・クロマキーグリーン × ティールグリーン文字
+ * ・ブラック × 黒文字
+ * ・ホワイト × 白文字
+ * @returns {boolean}
+ */
+function isContrastClash() {
+  const bg  = appState.background;
+  const col = appState.textColor;
+  return (
+    (bg === "green"  && col === "teal_white")  ||
+    (bg === "black"  && col === "black_white") ||
+    (bg === "white"  && col === "white_black")
+  );
+}
 
 /* =====================================================
  * 初期化処理（ページ読み込み完了後に実行）
@@ -32,7 +74,25 @@ document.addEventListener("DOMContentLoaded", () => {
   buildConversionTypeSection();
   buildUsageSection();
   buildDesignStyleSection();
-  buildFontStyleSection();
+
+  // ── 新規5セクション ──
+  // 総スタンプ数・まとめ方・背景・フォント・文字色
+  buildCardGroup("totalCountCards", "totalCount", TOTAL_COUNTS, "totalCount");
+  buildCardGroup("gridLayoutCards", "gridLayout", GRID_LAYOUTS, "gridLayout");
+  // 背景と文字色はコントラスト警告コールバック付き
+  buildCardGroup("backgroundCards", "background", BACKGROUNDS, "background", updateContrastWarning);
+  buildCardGroup("fontCards",       "font",        FONTS,        "font");
+  buildCardGroup("textColorCards",  "textColor",   TEXT_COLORS,  "textColor", updateContrastWarning);
+
+  // 各カード群の既定値をUIに反映（ページ読み込み直後も選択済みに見えるように）
+  setInitialCardSelection("totalCountCards", "totalCount", appState.totalCount);
+  setInitialCardSelection("gridLayoutCards", "gridLayout", appState.gridLayout);
+  setInitialCardSelection("backgroundCards", "background", appState.background);
+  setInitialCardSelection("fontCards",       "font",       appState.font);
+  setInitialCardSelection("textColorCards",  "textColor",  appState.textColor);
+
+  // 初回のコントラスト警告チェック
+  updateContrastWarning();
 
   // 関係性セクションは初期状態で非表示にする
   const relSection = document.getElementById("stepRelationship");
@@ -54,7 +114,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // オプショナルチェーン（?.）で要素が null の場合のエラーを防ぐ
   document.getElementById("masterCopyBtn")?.addEventListener("click", copyMasterPrompt);
   document.getElementById("sheet1CopyBtn")?.addEventListener("click", copySheet1Prompt);
-  document.getElementById("sheet2CopyBtn")?.addEventListener("click", copySheet2Prompt);
   document.getElementById("bulkCopyBtn")?.addEventListener("click", copyAllPrompts);
 
   // 兄弟スタンプ（固定スタイル）プリセットの初期設定
@@ -245,7 +304,7 @@ function buildCardGroup(containerId, groupName, options, stateKey, onChange) {
     descEl.className = "card-desc";
     descEl.textContent = opt.desc;
 
-    // フォント感のサンプル表示
+    // フォントのサンプル表示（sampleStyle が定義されているカード）
     if (opt.sampleStyle) {
       const sample = document.createElement("div");
       sample.className = "font-sample";
@@ -254,6 +313,25 @@ function buildCardGroup(containerId, groupName, options, stateKey, onChange) {
       content.appendChild(icon);
       content.appendChild(titleEl);
       content.appendChild(sample);
+      content.appendChild(descEl);
+    } else if (Object.prototype.hasOwnProperty.call(opt, "swatch")) {
+      // 色見本がある場合（背景・文字色カード）
+      // swatch が null の場合は透過チェッカー柄、文字列の場合はその色で表示する
+      const swatchEl = document.createElement("span");
+      if (opt.swatch === null) {
+        swatchEl.className = "card-swatch card-swatch--transparent";
+        swatchEl.title = "透過（背景なし）";
+      } else {
+        swatchEl.className = "card-swatch";
+        swatchEl.style.backgroundColor = opt.swatch;
+        // 白や明るい色は枠線で区別する
+        if (opt.swatch === "#FFFFFF") {
+          swatchEl.style.border = "1px solid #C8D0DA";
+        }
+      }
+      content.appendChild(icon);
+      content.appendChild(titleEl);
+      content.appendChild(swatchEl);
       content.appendChild(descEl);
     } else {
       content.appendChild(icon);
@@ -350,9 +428,41 @@ function buildDesignStyleSection() {
   buildCardGroup("designStyleCards", "designStyle", DESIGN_STYLES, "designStyle");
 }
 
-// フォント感の選択肢を生成
-function buildFontStyleSection() {
-  buildCardGroup("fontStyleCards", "fontStyle", FONT_STYLES, "fontStyle");
+/**
+ * カード群の既定値を UI に反映するヘルパー
+ * buildCardGroup 直後に呼ぶことで、ページ初期表示でも選択済みカードが見える
+ * @param {string} containerId - コンテナ要素のID
+ * @param {string} groupName   - ラジオボタンの name 属性
+ * @param {string} defaultVal  - appState の既定値（初期選択したい value）
+ */
+function setInitialCardSelection(containerId, groupName, defaultVal) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  // 既定値に対応するラジオボタンを探す
+  const radio = container.querySelector(`[name="${groupName}"][value="${defaultVal}"]`);
+  if (!radio) return;
+  radio.checked = true;
+  // 親の .option-card に selected クラスを付与する
+  const card = radio.closest(".option-card");
+  if (card) card.classList.add("selected");
+}
+
+/**
+ * 背景と文字色のコントラストが同系色かどうかを判定して警告を表示・非表示にする
+ * 背景カードまたは文字色カードが変更されるたびに呼ばれる（onChange コールバック）。
+ * DOMContentLoaded 時にも初回呼び出しする。
+ */
+function updateContrastWarning() {
+  const el = document.getElementById("contrastWarning");
+  if (!el) return;
+  if (isContrastClash()) {
+    el.textContent =
+      "⚠️ 背景と文字色が同系色です。読みにくい／透過しにくい可能性があります";
+    el.style.display = "block";
+  } else {
+    el.textContent = "";
+    el.style.display = "none";
+  }
 }
 
 /* =====================================================
@@ -397,6 +507,7 @@ function updateGenerateButtonState() {
     const personCountNum       = parseInt(appState.personCount, 10) || 0;
     const relationshipRequired = personCountNum >= 2;
 
+    // フォント・背景・文字色・総数・まとめ方は既定値あり → 必須チェックに含めない
     isReady =
       appState.images.length >= 1 &&
       appState.consent &&
@@ -404,8 +515,7 @@ function updateGenerateButtonState() {
       (!relationshipRequired || appState.relationship !== null) &&
       appState.conversionType !== null &&
       appState.usage !== null &&
-      appState.designStyle !== null &&
-      appState.fontStyle !== null;
+      appState.designStyle !== null;
 
     if (hintEl) {
       if (isReady) {
@@ -420,7 +530,6 @@ function updateGenerateButtonState() {
         if (!appState.conversionType)     missing.push("変換タイプ");
         if (!appState.usage)              missing.push("用途");
         if (!appState.designStyle)        missing.push("デザイン系統");
-        if (!appState.fontStyle)          missing.push("フォント感");
         hintEl.textContent = "未完了：" + missing.join("、");
         hintEl.className   = "generate-hint pending";
       }
@@ -434,25 +543,37 @@ function updateGenerateButtonState() {
  * プロンプト生成処理（アプリの核心機能）
  * ===================================================== */
 function handleGenerate() {
-  // プリセットON時は兄弟スタンプ専用フローで生成して早期リターンする
+  // 総数とグリッドレイアウトを appState から取得する（両モード共通）
+  const grid  = GRID_LAYOUTS.find((g) => g.value === appState.gridLayout) || GRID_LAYOUTS[0];
+  const total = parseInt(appState.totalCount, 10) || 32;
+
+  // ── 兄弟スタンプ（固定スタイル）プリセット ON のフロー ──
   if (appState.brotherPresetOn) {
-    const masterPrompt      = buildBrotherMasterPrompt(appState.brotherBgColor);
-    const individualPrompts = buildBrotherIndividualPrompts(appState.brotherBgColor);
-    // sheetPrompts に null を渡すとシートブロック非表示・参照ヒント表示に切り替わる
-    renderResults(masterPrompt, individualPrompts, null);
+    const masterPrompt = buildBrotherMasterPrompt();
+
+    if (grid.perImage === 1) {
+      // 個別モード：total 個の個別プロンプトを生成してシートは空配列で渡す
+      const individualPrompts = buildBrotherIndividualPrompts(total);
+      renderResults(masterPrompt, individualPrompts, []);
+    } else {
+      // シートモード：兄弟スタンプ専用シートプロンプトを生成する
+      const sheetArray = buildBrotherSheetPrompts(total, grid.cols, grid.perImage);
+      renderResults(masterPrompt, [], sheetArray);
+    }
     document.getElementById("resultsSection").scrollIntoView({ behavior: "smooth" });
     return;
   }
 
-  // 通常モード：選んだ設定のオブジェクトを取得する
+  // ── 通常モード：選んだ設定のオブジェクトを取得する ──
   const convType   = CONVERSION_TYPES.find((c) => c.value === appState.conversionType);
   const usageCat   = USAGE_CATEGORIES.find((u) => u.value === appState.usage);
   const design     = DESIGN_STYLES.find((d) => d.value === appState.designStyle);
-  const font       = FONT_STYLES.find((f) => f.value === appState.fontStyle);
+  // フォントは appState.font から getFont() で取得（旧 FONT_STYLES/fontStyle は廃止）
+  const font       = getFont();
   const relObj     = RELATIONSHIPS.find((r) => r.value === appState.relationship) || null;
 
   // find() が undefined を返した場合（データ定義ミス等）は早期リターンする
-  if (!convType || !usageCat || !design || !font) return;
+  if (!convType || !usageCat || !design) return;
 
   // 用途に対応するスタンプ文言リストを取得する
   const wordList = STAMP_DATA[usageCat.dataKey];
@@ -472,20 +593,21 @@ function handleGenerate() {
     appState.images.length, appState.personCount, relObj
   );
 
-  // --- (B) 32個の個別プロンプトを生成する ---
-  const individualPrompts = buildIndividualPrompts(
-    wordList, convType, design, font,
-    appState.personCount, relObj
-  );
-
-  // --- (C) 4×4グリッドのシートプロンプトを2枚（①1〜16番、②17〜32番）生成する ---
-  const sheetPrompts = buildSheetPrompts(
-    wordList, convType, design, font,
-    appState.personCount, relObj
-  );
-
-  // 結果を画面に表示する
-  renderResults(masterPrompt, individualPrompts, sheetPrompts);
+  if (grid.perImage === 1) {
+    // --- (B-1) 個別モード：total 個の個別プロンプトを生成し、シートは空配列で渡す ---
+    const individualPrompts = buildIndividualPrompts(
+      wordList, convType, design, font,
+      appState.personCount, relObj, total
+    );
+    renderResults(masterPrompt, individualPrompts, []);
+  } else {
+    // --- (B-2) シートモード：Math.ceil(total/perImage) 枚のシートプロンプト配列を生成する ---
+    const sheetArray = buildSheetPrompts(
+      wordList, convType, design, font,
+      appState.personCount, relObj, total, grid.cols, grid.perImage
+    );
+    renderResults(masterPrompt, [], sheetArray);
+  }
 
   // 結果エリアまでスムーズスクロールする
   document.getElementById("resultsSection").scrollIntoView({ behavior: "smooth" });
@@ -580,7 +702,7 @@ ${design.promptText}
 ■ LINEスタンプ規格（必ず守ること）
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ・正方形（縦横 1:1 の比率）で生成すること
-・背景は完全透明（透過PNG）にすること
+・${getBg().promptText}
 ・キャラクターを画面中央に大きく配置し、
 　上下左右に約 10% の余白を設けること
 ${stampCountRule}
@@ -591,12 +713,12 @@ ${stampCountRule}
 ■ 文字・フォント指定
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 スタンプ内のセリフ・文字は以下で表現すること：
-「${font.promptText}」
+「セリフ」を〔${getFont().promptText}〕で表示、色は〔${getTextColor().promptText}〕
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ■ シリーズ制作の宣言
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-これからこのキャラクターで合計 32 枚のスタンプを
+これからこのキャラクターで合計 ${parseInt(appState.totalCount, 10) || 32} 枚のスタンプを
 順番に生成します。
 
 表情・ポーズ・セリフは各スタンプで変わりますが、
@@ -616,28 +738,31 @@ ${stampCountRule}
  * @param {Object}      font        - フォント感オブジェクト
  * @param {string}      personCount - 登場人数（"1"/"2"/"3"）
  * @param {Object|null} relObj      - 関係性オブジェクト（1名のときは null）
- * @returns {string[]} 32個のプロンプト文字列の配列
+ * @param {number}      [totalCount] - 生成枚数（省略時は appState.totalCount を参照）
+ * @returns {string[]} 指定枚数分のプロンプト文字列の配列
  */
-function buildIndividualPrompts(wordList, convType, design, font, personCount, relObj) {
+function buildIndividualPrompts(wordList, convType, design, font, personCount, relObj, totalCount) {
   const personCountNum = parseInt(personCount, 10) || 1;
+  // totalCount が渡されなければ appState の値を使う
+  const count = totalCount || parseInt(appState.totalCount, 10) || 32;
 
-  // wordList が32個未満の場合は開発者向け警告を出す（サイレント減数の防止）
-  if (wordList.length < 32) {
+  // wordList が count 個未満の場合は開発者向け警告を出す（サイレント減数の防止）
+  if (wordList.length < count) {
     console.warn(
-      `[LINEスタンプメーカー] wordList が32個未満です（現在 ${wordList.length} 個）。` +
+      `[LINEスタンプメーカー] wordList が${count}個未満です（現在 ${wordList.length} 個）。` +
       "data.js の該当カテゴリを確認してください。"
     );
   }
 
   const prompts = [];
-  const total = Math.min(wordList.length, 32);
+  const total = Math.min(wordList.length, count);
 
   for (let i = 0; i < total; i++) {
     const item = wordList[i];
     const num  = String(i + 1).padStart(2, "0");
 
-    // 簡潔なスタイルタグ（毎回フルで書くと冗長なので語尾に短く付ける）
-    const styleTag = `（${design.label}・${font.label}・透過背景・正方形）`;
+    // 簡潔なスタイルタグ（背景・フォント・文字色を appState から取得して付ける）
+    const styleTag = `（${design.label}・${getBg().label}・正方形）`;
 
     // 2名以上のときは「シーンに自然な人数」と絡み方ヒントを条件付きで追加する
     let interactionLine = "";
@@ -651,7 +776,7 @@ function buildIndividualPrompts(wordList, convType, design, font, personCount, r
       `【スタンプ${num}】\n` +
       `上のマスタープロンプトのキャラクター設定に従い、以下の1枚を生成してください。\n` +
       `・表情とポーズ：${item.pose}${interactionLine}\n` +
-      `・セリフ：「${item.text}」を${font.label}で表示\n` +
+      `・セリフ：「${item.text}」を〔${getFont().promptText}〕で表示、色は〔${getTextColor().promptText}〕\n` +
       `・スタイル${styleTag}`;
 
     prompts.push(prompt);
@@ -661,26 +786,32 @@ function buildIndividualPrompts(wordList, convType, design, font, personCount, r
 }
 
 /**
- * 32種類のスタンプを4×4グリッド（1枚の画像）×2枚に分けてシートプロンプトを生成する。
- * シート①：スタンプ1〜16番（wordList[0..15]）
- * シート②：スタンプ17〜32番（wordList[16..31]）
- * 生成された各シートは後で16枚に均等分割してLINEスタンプとして使用する前提。
+ * 指定枚数のスタンプを cols×cols グリッドのシートにまとめたプロンプト配列を生成する。
+ * 旧来の固定2枚（4×4×16）から可変枚数・可変グリッドサイズに一般化。
  *
- * @param {Array}       wordList    - スタンプ文言と表情ヒントの配列（先頭32件を使用）
+ * @param {Array}       wordList    - スタンプ文言と表情ヒントの配列
  * @param {Object}      convType    - 変換タイプオブジェクト
  * @param {Object}      design      - デザイン系統オブジェクト
- * @param {Object}      font        - フォント感オブジェクト
+ * @param {Object}      font        - フォント感オブジェクト（旧互換用：UI未統合の間使用）
  * @param {string}      personCount - 登場人数（"1"/"2"/"3"）
  * @param {Object|null} relObj      - 関係性オブジェクト（1名のときは null）
- * @returns {{ sheet1: string, sheet2: string }} 2枚分のシートプロンプト
+ * @param {number}      totalCount  - 生成する総スタンプ枚数
+ * @param {number}      cols        - グリッドの列数（例: 4 → 4×4 = 16マス/シート）
+ * @param {number}      perImage    - 1シートに収めるスタンプ数（cols×cols）
+ * @returns {string[]} シートプロンプト文字列の配列（シート数 = Math.ceil(total/perImage)）
  */
-function buildSheetPrompts(wordList, convType, design, font, personCount, relObj) {
+function buildSheetPrompts(wordList, convType, design, font, personCount, relObj, totalCount, cols, perImage) {
   const personCountNum = parseInt(personCount, 10) || 1;
+  // 引数で指定がなければ appState から取得してフォールバック
+  const total      = totalCount  || parseInt(appState.totalCount, 10) || 32;
+  const gridCols   = cols        || 4;
+  const gridPerImg = perImage    || 16;
+  const count      = Math.min(wordList.length, total);
+  const sheetCount = Math.ceil(count / gridPerImg);
 
-  // wordList が32個未満の場合は開発者向け警告を出す（サイレント減数の防止）
-  if (wordList.length < 32) {
+  if (wordList.length < total) {
     console.warn(
-      `[LINEスタンプメーカー] wordList が32個未満です（現在 ${wordList.length} 個）。` +
+      `[LINEスタンプメーカー] wordList が${total}個未満です（現在 ${wordList.length} 個）。` +
       "data.js の該当カテゴリを確認してください。"
     );
   }
@@ -695,7 +826,6 @@ function buildSheetPrompts(wordList, convType, design, font, personCount, relObj
     const relationLabel = relObj ? relObj.label : "不問";
     const relationDesc  = relObj ? relObj.masterDesc : "自然な関係として描く。状況に合った自然な絡みややりとりを表現する";
 
-    // 全員強制ではなく「各マスのシーンに自然な人数」を登場させる方針
     personSection =
       `登場人数：最大${personCountNum}名（関係性：${relationLabel}）\n` +
       `参照画像から${personCountNum}名分のキャラクターを作成する。\n` +
@@ -705,11 +835,10 @@ function buildSheetPrompts(wordList, convType, design, font, personCount, relObj
       `どのキャラクターを描く場合も、外見（顔・髪・服・体型・配色）は固定したまま描くこと。`;
   }
 
-  // 各マスの仕様行を生成するヘルパー（startIndex は 0始まりのオフセット、番号はスタンプ通し番号）
+  // 各マスの仕様行を生成するヘルパー（startIndex は 0始まりのオフセット）
   function buildCellLines(wordSlice, startIndex) {
     return wordSlice.map((item, idx) => {
       const num = String(startIndex + idx + 1).padStart(2, "0");
-      // 2名以上のときは絡み方ヒントを条件付きで付ける
       let interactionPart = "";
       if (personCountNum >= 2 && relObj) {
         interactionPart = `（2名以上登場する場合は${relObj.interactionHint}）`;
@@ -718,125 +847,165 @@ function buildSheetPrompts(wordList, convType, design, font, personCount, relObj
     });
   }
 
-  // 両シート共通のキャラ固定・スタイル・グリッド仕様ブロック
-  const charAndStyleBlock =
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-    `■ キャラクター固定ルール（最優先・絶対厳守）\n` +
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-    `参照画像の人物の以下の要素を完全に固定し、\n` +
-    `グリッド内の全16マスで一切変えないこと。\n` +
-    `キャラクターの一貫性がこのシートの最重要事項です。\n\n` +
-    `・顔立ち（目の形・大きさ、鼻・口・輪郭の形）\n` +
-    `・髪型（長さ・流れ・スタイル）と髪の色\n` +
-    `・体型・プロポーション\n` +
-    `・服装・衣装の色とデザイン\n` +
-    `・キャラクター全体の雰囲気・個性\n\n` +
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-    `■ 変換スタイル\n` +
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-    `${convType.promptText}\n\n` +
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-    `■ アートスタイル\n` +
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-    `${design.promptText}\n\n` +
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-    `■ 文字・フォント指定\n` +
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-    `スタンプ内のセリフ・文字は以下で表現すること：\n` +
-    `「${font.promptText}」（${font.label}で表示）\n\n` +
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-    `■ グリッドレイアウトの仕様（切り分けのために厳守）\n` +
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-    `この画像は生成後に16枚の個別スタンプに均等分割して使用するため、\n` +
-    `各マスが独立した1枚のスタンプとして完全に成立する構図にすること。\n\n` +
-    `・4行×4列の合計16マスで構成すること\n` +
-    `・全マスは完全に均等な正方形・同一サイズにし、\n` +
-    `　ピクセル単位でグリッドが整列していること（等分割しても各スタンプがズレずに切り出せる）\n` +
-    `・各キャラクターおよびセリフ文字は必ずそのマスの内側に完全に収まること\n` +
-    `　（マスの境界線を越えてはみ出してはならない・隣のマスに食い込まない）\n` +
-    `・マス間には均一な余白（ガター）を設け、境界が視認できるようにすること\n` +
-    `・各マスの背景は白または透明で全マス統一すること\n` +
-    `・グリッド全体は正方形に近い比率で生成すること`;
+  // 全シート共通のキャラ固定・スタイル・グリッド仕様ブロック
+  function buildCharAndStyleBlock(cellsInSheet) {
+    return (
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `■ キャラクター固定ルール（最優先・絶対厳守）\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `参照画像の人物の以下の要素を完全に固定し、\n` +
+      `グリッド内の全${cellsInSheet}マスで一切変えないこと。\n` +
+      `キャラクターの一貫性がこのシートの最重要事項です。\n\n` +
+      `・顔立ち（目の形・大きさ、鼻・口・輪郭の形）\n` +
+      `・髪型（長さ・流れ・スタイル）と髪の色\n` +
+      `・体型・プロポーション\n` +
+      `・服装・衣装の色とデザイン\n` +
+      `・キャラクター全体の雰囲気・個性\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `■ 変換スタイル\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `${convType.promptText}\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `■ アートスタイル\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `${design.promptText}\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `■ 文字・フォント指定\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `スタンプ内のセリフ・文字は以下で表現すること：\n` +
+      `「セリフ」を〔${getFont().promptText}〕で表示、色は〔${getTextColor().promptText}〕\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `■ グリッドレイアウトの仕様（切り分けのために厳守）\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `この画像は生成後に${cellsInSheet}枚の個別スタンプに均等分割して使用するため、\n` +
+      `各マスが独立した1枚のスタンプとして完全に成立する構図にすること。\n\n` +
+      `・${gridCols}行×${gridCols}列の合計${cellsInSheet}マスで構成すること\n` +
+      `・全マスは完全に均等な正方形・同一サイズにし、\n` +
+      `　ピクセル単位でグリッドが整列していること（等分割しても各スタンプがズレずに切り出せる）\n` +
+      `・各キャラクターおよびセリフ文字は必ずそのマスの内側に完全に収まること\n` +
+      `　（マスの境界線を越えてはみ出してはならない・隣のマスに食い込まない）\n` +
+      `・マス間には均一な余白（ガター）を設け、境界が視認できるようにすること\n` +
+      `・${getBg().promptText}\n` +
+      `・グリッド全体は正方形に近い比率で生成すること`
+    );
+  }
 
-  // 共通の注意事項ブロック
+  // 共通の注意事項ブロック（グリッドサイズに合わせて文言を動的に変える）
   const noticeBlock =
     `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
     `■ 注意事項\n` +
     `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-    `画像生成AIによっては16マス一括だと細部が乱れることがあります。\n` +
-    `うまくいかない場合は、4枚（1行4マスずつ）に分けて生成するか、\n` +
+    `画像生成AIによっては${gridPerImg}マス一括だと細部が乱れることがあります。\n` +
+    `うまくいかない場合は、${gridCols}枚（1行${gridCols}マスずつ）に分けて生成するか、\n` +
     `マスタープロンプト＋個別プロンプト方式に切り替えてください。`;
 
-  // シート①（スタンプ1〜16番）
-  const cellLines1 = buildCellLines(wordList.slice(0, 16), 0);
-  const sheet1 =
-    `【シートプロンプト①：スタンプ1〜16番を1枚の画像（4×4グリッド）にまとめて生成】\n\n` +
-    `添付した参照画像を参照して、以下の指示に従いLINEスタンプ用の画像を1枚生成してください。\n\n` +
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-    `■ 登場人数・関係性の設定\n` +
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-    `${personSection}\n\n` +
-    `${charAndStyleBlock}\n\n` +
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-    `■ 各マスの仕様（16マス分）\n` +
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-    `左上から右方向へ、1行4マスずつ順番に配置してください。\n\n` +
-    `${cellLines1.join("\n")}\n\n` +
-    `${noticeBlock}`;
+  // シートを sheetCount 枚ループで生成し、配列にして返す
+  const sheets = [];
+  for (let s = 0; s < sheetCount; s++) {
+    const startIdx   = s * gridPerImg;
+    const slice      = wordList.slice(startIdx, Math.min(startIdx + gridPerImg, count));
+    const cellsInSheet = slice.length;
+    const startStamp = startIdx + 1;
+    const endStamp   = startIdx + cellsInSheet;
+    // シート番号は2枚以上のときのみ ①②… 形式で付ける
+    const sheetLabel  = sheetCount > 1
+      ? `${"①②③④⑤⑥⑦⑧"[s] || (s + 1)}` : "";
+    const sheetTitle  = sheetCount > 1
+      ? `【シートプロンプト${sheetLabel}：スタンプ${startStamp}〜${endStamp}番を1枚の画像（${gridCols}×${gridCols}グリッド）にまとめて生成】`
+      : `【シートプロンプト：スタンプ${startStamp}〜${endStamp}番を1枚の画像（${gridCols}×${gridCols}グリッド）にまとめて生成】`;
 
-  // シート②（スタンプ17〜32番）
-  const cellLines2 = buildCellLines(wordList.slice(16, 32), 16);
-  const sheet2 =
-    `【シートプロンプト②：スタンプ17〜32番を1枚の画像（4×4グリッド）にまとめて生成】\n\n` +
-    `添付した参照画像を参照して、以下の指示に従いLINEスタンプ用の画像を1枚生成してください。\n\n` +
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-    `■ 登場人数・関係性の設定\n` +
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-    `${personSection}\n\n` +
-    `${charAndStyleBlock}\n\n` +
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-    `■ 各マスの仕様（16マス分）\n` +
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-    `左上から右方向へ、1行4マスずつ順番に配置してください。\n\n` +
-    `${cellLines2.join("\n")}\n\n` +
-    `${noticeBlock}`;
+    const cellLines = buildCellLines(slice, startIdx);
 
-  return { sheet1, sheet2 };
+    const sheet =
+      `${sheetTitle}\n\n` +
+      `添付した参照画像を参照して、以下の指示に従いLINEスタンプ用の画像を1枚生成してください。\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `■ 登場人数・関係性の設定\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `${personSection}\n\n` +
+      `${buildCharAndStyleBlock(cellsInSheet)}\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `■ 各マスの仕様（${cellsInSheet}マス分）\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `左上から右方向へ、1行${gridCols}マスずつ順番に配置してください。\n\n` +
+      `${cellLines.join("\n")}\n\n` +
+      `${noticeBlock}`;
+
+    sheets.push(sheet);
+  }
+
+  return sheets;
 }
 
 /* =====================================================
  * 結果の表示処理
  * ===================================================== */
+/**
+ * @param {string}          masterPrompt      - マスタープロンプト文字列
+ * @param {string[]}        individualPrompts - 個別プロンプトの配列（シートモード時は []）
+ * @param {string[]|null}   sheetPrompts
+ *   null         → 兄弟プリセットON（シートなし・参照ヒント表示）
+ *   []           → 個別モード（シートブロック非表示・ヒントも非表示）
+ *   string[]     → シートモード（全シートを sheet1 ブロックに連結表示）
+ */
 function renderResults(masterPrompt, individualPrompts, sheetPrompts) {
   const section = document.getElementById("resultsSection");
   section.style.display = "block";
 
-  // sheetPrompts が null のとき = プリセットON（シートなし）モード
-  const isPreset = sheetPrompts === null;
+  // sheetPrompts の種別を判定する
+  // []       = 個別モード（シートなし・ヒントなし）
+  // string[] = シートモード（全シートを sheet1 ブロックに連結表示）
+  // 兄弟プリセットON の判定は appState.brotherPresetOn を直接参照する
+  const isPreset     = appState.brotherPresetOn;
+  const isSheetMode  = Array.isArray(sheetPrompts) && sheetPrompts.length > 0;
+  const isIndividual = Array.isArray(sheetPrompts) && sheetPrompts.length === 0;
 
   // マスタープロンプトを表示する
   document.getElementById("masterPromptText").textContent = masterPrompt;
 
-  // プリセット時はシートブロックを非表示にし、参照画像ヒントを表示する
-  document.querySelectorAll(".sheet-prompt-block").forEach((el) => {
-    el.style.display = isPreset ? "none" : "";
+  // シートブロックの表示制御
+  // ・プリセットON / 個別モード → 全シートブロックを非表示
+  // ・シートモード → sheet1 ブロックを表示、sheet2 ブロックは非表示（連結表示のため）
+  const sheetBlocks = document.querySelectorAll(".sheet-prompt-block");
+  sheetBlocks.forEach((el, idx) => {
+    if (isPreset || isIndividual) {
+      el.style.display = "none";
+    } else {
+      // sheet1（index=0）のみ表示し、sheet2（index=1）以降は非表示にして sheet1 に連結
+      el.style.display = idx === 0 ? "" : "none";
+    }
   });
+
+  // 兄弟プリセットON のとき だけ参照ヒントを表示する
   const refHint = document.getElementById("brotherRefHint");
   if (refHint) refHint.style.display = isPreset ? "block" : "none";
 
-  // シートプロンプト①②はプリセットOFFのときのみ表示する
-  if (!isPreset) {
-    document.getElementById("sheet1PromptText").textContent = sheetPrompts.sheet1;
-    document.getElementById("sheet2PromptText").textContent = sheetPrompts.sheet2;
+  // シートモードのとき、全シートを区切り線で連結して sheet1PromptText に表示する
+  if (isSheetMode) {
+    const divider = "\n\n" + "═".repeat(50) + "\n\n";
+    document.getElementById("sheet1PromptText").textContent = sheetPrompts.join(divider);
   }
 
-  // 32枚一括コピー用のテキストを準備する
-  const allText =
-    "【マスタープロンプト】\n" + masterPrompt + "\n\n" +
-    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-    "【個別プロンプト 32枚】\n" +
-    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" +
-    individualPrompts.join("\n\n");
+  // 一括コピー用テキストをモードに応じて生成する
+  // ─ シートモード: マスター + 全シートプロンプト
+  // ─ 個別モード:  マスター + 個別プロンプト（枚数はハードコードせず動的取得）
+  let allText;
+  if (isSheetMode) {
+    const divider = "\n\n" + "═".repeat(50) + "\n\n";
+    allText =
+      "【マスタープロンプト】\n" + masterPrompt + "\n\n" +
+      "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+      "【シートプロンプト】\n" +
+      "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" +
+      sheetPrompts.join(divider);
+  } else {
+    allText =
+      "【マスタープロンプト】\n" + masterPrompt + "\n\n" +
+      "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+      `【個別プロンプト ${individualPrompts.length}枚】\n` +
+      "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" +
+      individualPrompts.join("\n\n");
+  }
 
   // 一括コピーボタンのデータ属性に格納する
   const bulkCopyBtn = document.getElementById("bulkCopyBtn");
@@ -940,13 +1109,6 @@ function copySheet1Prompt() {
   copyToClipboard(text, btn);
 }
 
-// シートプロンプト②のコピーボタン（スタンプ17〜32番）
-function copySheet2Prompt() {
-  const text = document.getElementById("sheet2PromptText").textContent;
-  const btn  = document.getElementById("sheet2CopyBtn");
-  copyToClipboard(text, btn);
-}
-
 // 全プロンプト一括コピーボタン
 function copyAllPrompts() {
   const btn  = document.getElementById("bulkCopyBtn");
@@ -987,7 +1149,7 @@ function showAlert(message) {
 /**
  * 兄弟スタンププリセットの初期設定（DOMContentLoaded から呼ばれる）
  * ─ チェックボックスON/OFFで汎用選択セクション（STEP 2〜7）を表示/非表示する
- * ─ 背景色ラジオボタンの変更を appState.brotherBgColor に反映する
+ * ─ 背景・フォント・文字色はSTEP 8〜10 の各カードで選択する（brotherBg廃止済み）
  */
 function setupBrotherPreset() {
   const checkbox = document.getElementById("brotherPresetCheck");
@@ -1001,15 +1163,16 @@ function setupBrotherPreset() {
     const details = document.getElementById("brotherPresetDetails");
     if (details) details.style.display = checkbox.checked ? "block" : "none";
 
-    // 汎用選択セクション（STEP 2〜7）の表示/非表示
+    // 汎用選択セクション（STEP 2〜6）の表示/非表示
     // ─ プリセットON時は非表示にして固定スタイルで上書きする
+    // ─ 総数(stepTotalCount)/まとめ方(stepGridLayout)/背景(stepBackground)/
+    //   フォント(step5)/文字色(stepTextColor) はプリセットON時も操作可能にするため含めない
     const genericSectionIds = [
       "stepPersonCount",  // STEP 2: 登場人数
       "stepRelationship", // STEP 3: 関係性
       "step2",            // STEP 4: 変換タイプ
       "step3",            // STEP 5: 用途
       "step4",            // STEP 6: デザイン系統
-      "step5",            // STEP 7: フォント感
     ];
     genericSectionIds.forEach((id) => {
       const el = document.getElementById(id);
@@ -1029,44 +1192,36 @@ function setupBrotherPreset() {
     updateGenerateButtonState();
   });
 
-  // 背景色ラジオボタンの変更を appState に反映する
-  document.querySelectorAll('[name="brotherBg"]').forEach((radio) => {
-    radio.addEventListener("change", () => {
-      appState.brotherBgColor = radio.value;
-    });
-  });
 }
 
 /**
  * 兄弟スタンプ（固定スタイル）のマスタープロンプトを生成する
- * ─ BROTHER_STAMP_PRESET.masterBase の {{BG_TEXT}} を
- *   選択した背景色の指定文言に置き換えて返す
- * @param {string} bgColor - "green"（クロマキーグリーン）または "black"（ブラック）
- * @returns {string} 生成されたマスタープロンプト
+ * ─ BROTHER_STAMP_PRESET.masterBase の 3 つのプレースホルダーを全て置換して返す
+ *   {{BG_TEXT}}         → getBg().promptText（appState.background から取得）
+ *   {{FONT_TEXT}}       → getFont().promptText（appState.font から取得）
+ *   {{TEXT_COLOR_TEXT}} → getTextColor().promptText（appState.textColor から取得）
+ * ※ 旧来の bgColor 引数は後方互換のため残すが、内部では appState を使用する
+ * @returns {string} プレースホルダーが全て解決されたマスタープロンプト
  */
-function buildBrotherMasterPrompt(bgColor) {
-  const bgText = bgColor === "black"
-    ? BROTHER_STAMP_PRESET.bgTextBlack
-    : BROTHER_STAMP_PRESET.bgTextGreen;
-  return BROTHER_STAMP_PRESET.masterBase.replace("{{BG_TEXT}}", bgText);
+function buildBrotherMasterPrompt() {
+  return BROTHER_STAMP_PRESET.masterBase
+    .replace("{{BG_TEXT}}",         getBg().promptText)
+    .replace("{{FONT_TEXT}}",       getFont().promptText)
+    .replace("{{TEXT_COLOR_TEXT}}", getTextColor().promptText);
 }
 
 /**
- * 兄弟スタンプ（固定スタイル）の個別プロンプト 32 個を生成する
- * ─ STAMP_DATA.parenting（育児系）の先頭 32 件を使用する
- * ─ キャラ・絵柄・文字は固定スタイルで上書き済みのため
- *   表情/ポーズ・セリフ・背景色の指定のみで完結させる
+ * 兄弟スタンプ（固定スタイル）の個別プロンプトを生成する
+ * ─ STAMP_DATA.parenting（育児系）の先頭 totalCount 件を使用する
+ * ─ 背景・フォント・文字色は appState から getBg/getFont/getTextColor() で取得する
  * ─ 「セリフ・シーンに自然な人数（1〜3人）で描く」を毎プロンプトに含める
- * @param {string} bgColor - "green" または "black"
- * @returns {string[]} 32 個のプロンプト文字列の配列
+ * @param {number} [totalCount] - 生成枚数（省略時は appState.totalCount を参照）
+ * @returns {string[]} プロンプト文字列の配列
  */
-function buildBrotherIndividualPrompts(bgColor) {
-  const bgLabel = bgColor === "black"
-    ? "真っ黒（#000000）のベタ塗り"
-    : "クロマキーグリーン（#00B140）のベタ塗り";
-
+function buildBrotherIndividualPrompts(totalCount) {
+  const count    = totalCount || parseInt(appState.totalCount, 10) || 32;
   const wordList = STAMP_DATA.parenting;
-  const total    = Math.min(wordList.length, 32);
+  const total    = Math.min(wordList.length, count);
   const prompts  = [];
 
   for (let i = 0; i < total; i++) {
@@ -1077,12 +1232,63 @@ function buildBrotherIndividualPrompts(bgColor) {
       `【スタンプ${num}】\n` +
       `上のマスター設定のキャラ・絵柄で、以下の1枚を生成してください。\n` +
       `・表情とポーズ：${item.pose}\n` +
-      `・セリフ：「${item.text}」を丸ゴシック太字・クリーム縁取り・語尾オレンジで表示\n` +
+      `・セリフ：「${item.text}」を〔${getFont().promptText}〕で表示、色は〔${getTextColor().promptText}〕\n` +
       `・登場人数：このセリフ・シーンに最も自然な人数（1〜3人）で描くこと（お母さんだけ／兄弟だけ／3人、いずれも可）\n` +
-      `・背景：${bgLabel}`;
+      `・背景：${getBg().promptText}`;
 
     prompts.push(prompt);
   }
 
   return prompts;
+}
+
+/**
+ * 兄弟スタンプ（固定スタイル）のシートプロンプト配列を生成する
+ * ─ 一般モードの buildSheetPrompts と同じ総数×グリッド分岐ロジックに対応
+ * @param {number} totalCount - 生成する総スタンプ枚数
+ * @param {number} cols       - グリッドの列数（例: 4 → 4×4 = 16マス/シート）
+ * @param {number} perImage   - 1シートに収めるスタンプ数
+ * @returns {string[]} シートプロンプト文字列の配列
+ */
+function buildBrotherSheetPrompts(totalCount, cols, perImage) {
+  const count      = Math.min(STAMP_DATA.parenting.length, totalCount);
+  const sheetCount = Math.ceil(count / perImage);
+  const wordList   = STAMP_DATA.parenting;
+  const sheets     = [];
+
+  for (let s = 0; s < sheetCount; s++) {
+    const startIdx     = s * perImage;
+    const slice        = wordList.slice(startIdx, Math.min(startIdx + perImage, count));
+    const cellsInSheet = slice.length;
+    const startStamp   = startIdx + 1;
+    const endStamp     = startIdx + cellsInSheet;
+    const sheetLabel   = sheetCount > 1
+      ? `${"①②③④⑤⑥⑦⑧"[s] || (s + 1)}` : "";
+    const sheetTitle   = sheetCount > 1
+      ? `【シートプロンプト${sheetLabel}：スタンプ${startStamp}〜${endStamp}番（${cols}×${cols}グリッド）】`
+      : `【シートプロンプト：スタンプ${startStamp}〜${endStamp}番（${cols}×${cols}グリッド）】`;
+
+    const cellLines = slice.map((item, idx) => {
+      const num = String(startIdx + idx + 1).padStart(2, "0");
+      return `マス${num}：表情/ポーズ＝${item.pose}、セリフ＝「${item.text}」`;
+    });
+
+    const sheet =
+      `${sheetTitle}\n\n` +
+      `上のマスター設定のキャラ・絵柄で、以下の${cellsInSheet}個のスタンプを${cols}×${cols}グリッドにまとめた1枚の画像を生成してください。\n\n` +
+      `■ 各マスの仕様\n` +
+      `${cellLines.join("\n")}\n\n` +
+      `■ グリッド仕様\n` +
+      `・${cols}行×${cols}列の合計${cellsInSheet}マスで構成すること\n` +
+      `・全マスは完全に均等な正方形・同一サイズで整列し、ピクセル単位でグリッドが揃うこと\n` +
+      `・各キャラクターとセリフはそのマスの内側に収まること（境界をまたがない）\n` +
+      `・登場人数：各マスのセリフ・シーンに最も自然な人数（1〜3人）で描くこと\n\n` +
+      `■ 背景・文字\n` +
+      `・${getBg().promptText}\n` +
+      `・「セリフ」を〔${getFont().promptText}〕で表示、色は〔${getTextColor().promptText}〕`;
+
+    sheets.push(sheet);
+  }
+
+  return sheets;
 }

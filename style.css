@@ -499,6 +499,52 @@ button {
 }
 
 /* =====================================================
+ * 色見本（背景カード・文字色カード）
+ * ===================================================== */
+
+/* 色見本チップ：カード中央に配置する丸型のカラーブロック */
+.card-swatch {
+  display: inline-block;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  margin: var(--spacing-sm) auto;
+  /* デフォルト枠線（暗い色は不要だが白い色に合わせてデフォルト設定） */
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* 透過（背景なし）の場合：チェッカー柄で視覚的に透明を表現する */
+.card-swatch--transparent {
+  /* 市松模様：白と薄いグレーの繰り返し */
+  background-image:
+    linear-gradient(45deg, #C8C8C8 25%, transparent 25%),
+    linear-gradient(-45deg, #C8C8C8 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #C8C8C8 75%),
+    linear-gradient(-45deg, transparent 75%, #C8C8C8 75%);
+  background-size: 12px 12px;
+  background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+  background-color: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.14);
+}
+
+/* =====================================================
+ * コントラスト警告（背景と文字色が同系色のとき表示）
+ * ===================================================== */
+.contrast-warning {
+  background: #FFF3CD;
+  border: 1px solid #F6C84C;
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  font-size: 0.85rem;
+  color: #7A5A00;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* =====================================================
  * 生成ボタンエリア
  * ===================================================== */
 .generate-area {
