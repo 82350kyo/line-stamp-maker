@@ -23,7 +23,7 @@ const appState = {
   gridLayout: "1",         // まとめ方（GRID_LAYOUTS の value。"1"=個別）
   background: "green",     // 背景種別（BACKGROUNDS の value）
   font: "marugo",          // フォント種別（FONTS の value）
-  textColor: "brown_cream",// 文字色種別（TEXT_COLORS の value）
+  textColor: "natural",    // 文字色種別（TEXT_COLORS の value）
 };
 
 /* =====================================================
@@ -57,10 +57,12 @@ function getTextColor() {
 function isContrastClash() {
   const bg  = appState.background;
   const col = appState.textColor;
+  // モノクロテイストは黒文字×黒背景、または白文字×白背景になる場合があるため警告
+  // それ以外のテイスト（colorful/pastel/gorgeous/situational/natural）は
+  // 白縁取りで視認性を確保するため警告不要
   return (
-    (bg === "green"  && col === "teal_white")  ||
-    (bg === "black"  && col === "black_white") ||
-    (bg === "white"  && col === "white_black")
+    col === "monochrome" &&
+    (bg === "black" || bg === "white")
   );
 }
 
@@ -314,11 +316,19 @@ function buildCardGroup(containerId, groupName, options, stateKey, onChange) {
       content.appendChild(titleEl);
       content.appendChild(sample);
       content.appendChild(descEl);
-    } else if (Object.prototype.hasOwnProperty.call(opt, "swatch")) {
+    } else if (
+      Object.prototype.hasOwnProperty.call(opt, "swatchStyle") ||
+      Object.prototype.hasOwnProperty.call(opt, "swatch")
+    ) {
       // 色見本がある場合（背景・文字色カード）
-      // swatch が null の場合は透過チェッカー柄、文字列の場合はその色で表示する
+      // swatchStyle（グラデーション等）が優先。なければ従来の swatch を使う。
+      // swatch が null の場合は透過チェッカー柄で表示する。
       const swatchEl = document.createElement("span");
-      if (opt.swatch === null) {
+      if (opt.swatchStyle) {
+        // グラデーション等の CSS background 値を直接適用（単色 HEX も可）
+        swatchEl.className = "card-swatch";
+        swatchEl.style.background = opt.swatchStyle;
+      } else if (opt.swatch === null) {
         swatchEl.className = "card-swatch card-swatch--transparent";
         swatchEl.title = "透過（背景なし）";
       } else {
@@ -457,7 +467,7 @@ function updateContrastWarning() {
   if (!el) return;
   if (isContrastClash()) {
     el.textContent =
-      "⚠️ 背景と文字色が同系色です。読みにくい／透過しにくい可能性があります";
+      "⚠️ モノクロテイストと黒／白背景の組み合わせは、背景と文字色が近く読みにくい可能性があります";
     el.style.display = "block";
   } else {
     el.textContent = "";

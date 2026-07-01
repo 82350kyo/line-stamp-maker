@@ -595,47 +595,64 @@ const FONTS = [
  * ======================================================== */
 const TEXT_COLORS = [
   {
-    value: "brown_cream",
-    label: "濃茶＋クリーム縁",
-    desc: "濃い茶色に白縁＋オレンジアクセント",
-    swatch: "#5B3A1E",
+    value: "natural",
+    label: "ナチュラル",
+    icon: "茶",
+    desc: "濃い茶＋クリーム縁（あたたかい定番）",
+    // 濃い茶色の単色見本
+    swatchStyle: "#5B3A1E",
     promptText:
-      "濃い茶色の文字に、クリーム／白の太い縁取り＋淡いオレンジのふんわりグロー、語尾の1〜数文字をオレンジでアクセント",
+      "濃い茶色の文字に、クリーム／白の太い縁取り＋淡いオレンジのふんわりグロー、語尾の1〜数文字をオレンジでアクセント（あたたかい印象）",
   },
   {
-    value: "white_black",
-    label: "白＋黒縁",
-    desc: "白い文字に黒の太い縁取り",
-    swatch: "#FFFFFF",
-    promptText: "白い文字に黒〜濃いグレーの太い縁取り",
+    value: "colorful",
+    label: "カラフル",
+    icon: "彩",
+    desc: "ポップで明るい多色づかい",
+    // 5色のグラデーションでポップさを表現
+    swatchStyle: "linear-gradient(90deg,#ff5252,#ffb300,#4caf50,#2196f3,#9c27b0)",
+    promptText:
+      "文字を明るくカラフルな多色づかいにする（1文字ずつ色を変える／語尾を差し色にするなどポップで元気に）。白の太い縁取りで視認性を確保",
   },
   {
-    value: "orange_white",
-    label: "オレンジ＋白縁",
-    desc: "オレンジ文字に白の太い縁取り",
-    swatch: "#F08A24",
-    promptText: "オレンジ色の文字に白の太い縁取り",
+    value: "monochrome",
+    label: "モノクロ",
+    icon: "白",
+    desc: "黒×白でシンプル・万能",
+    // 左半分黒・右半分白で白黒を表現
+    swatchStyle: "linear-gradient(90deg,#111 50%,#fff 50%)",
+    promptText:
+      "黒い文字に白の太い縁取り（またはその反転）のモノクロ配色。シンプルでどんな背景にも合わせやすい",
   },
   {
-    value: "teal_white",
-    label: "ティール＋白縁",
-    desc: "ティールグリーン文字に白の太い縁取り",
-    swatch: "#2F9E8F",
-    promptText: "ティールグリーンの文字に白の太い縁取り",
+    value: "pastel",
+    label: "パステル",
+    icon: "淡",
+    desc: "やわらかいパステル配色",
+    // 水色→ピンク→クリーム→ミントのグラデーション
+    swatchStyle: "linear-gradient(90deg,#a5d8ff,#ffd6e7,#fff3bf,#c3fae8)",
+    promptText:
+      "やわらかいパステルカラー（水色・ピンク・クリーム・ミントなど）の文字＋白の太い縁取り。やさしい印象",
   },
   {
-    value: "pink_white",
-    label: "ピンク＋白縁",
-    desc: "やさしいピンク文字に白の太い縁取り",
-    swatch: "#F48FB1",
-    promptText: "やさしいピンクの文字に白の太い縁取り",
+    value: "gorgeous",
+    label: "ゴージャス",
+    icon: "金",
+    desc: "ゴールド＋光沢で高級感",
+    // ゴールドのグラデーションで高級感を表現
+    swatchStyle: "linear-gradient(135deg,#bfa14a,#f9e28c,#d4af37,#8a6d1b)",
+    promptText:
+      "ゴールド／金色の文字に濃いめの縁取りと光沢・華やかな装飾を加え、高級感のある配色にする",
   },
   {
-    value: "black_white",
-    label: "黒＋白縁",
-    desc: "黒い文字に白の太い縁取り",
-    swatch: "#222222",
-    promptText: "黒い文字に白の太い縁取り",
+    value: "situational",
+    label: "シチュエーションに合わせる",
+    icon: "AI",
+    desc: "内容や感情に合う色をAIが自動選択",
+    // 虹色のコニックグラデーションでAI自動選択を表現
+    swatchStyle: "conic-gradient(#ff8a80,#ffd180,#ccff90,#80d8ff,#b388ff,#ff8a80)",
+    promptText:
+      "セリフの内容・感情・場面に最も合う文字色をAIが自動で選ぶ（例：嬉しい→暖色、眠い/落ち着き→やさしい寒色、応援→ビビッド）。いずれも太い縁取りで視認性を確保する",
   },
 ];
 
